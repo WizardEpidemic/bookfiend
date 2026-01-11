@@ -1,0 +1,22 @@
+# Excludes local dependencies, build artifacts, environments, and secrets from Docker build contexts.
+
+.git
+.gitignore
+
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+
+**/node_modules
+**/.next
+**/dist
+**/build
+
+**/.env
+**/.env.*
+!**/.env.example
+
+.DS_Store
+Thumbs.db

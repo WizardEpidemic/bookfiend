@@ -1,3 +1,5 @@
+# Defines the local BookFiend application stack and its service dependencies.
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -26,6 +28,34 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    container_name: bookfiend-api
+    environment:
+      DATABASE_URL: postgresql+psycopg://bookfiend:bookfiend_dev@postgres:5432/bookfiend
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.web
+    container_name: bookfiend-web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

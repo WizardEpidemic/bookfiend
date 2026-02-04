@@ -33,12 +33,26 @@ services:
     build:
       context: .
       dockerfile: infra/Dockerfile.api
+    image: bookfiend-api
     container_name: bookfiend-api
     environment:
       DATABASE_URL: postgresql+psycopg://bookfiend:bookfiend_dev@postgres:5432/bookfiend
       REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: bookfiend-api
+    container_name: bookfiend-worker
+    command: celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      DATABASE_URL: postgresql+psycopg://bookfiend:bookfiend_dev@postgres:5432/bookfiend
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy

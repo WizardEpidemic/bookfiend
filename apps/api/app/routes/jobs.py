@@ -1,13 +1,14 @@
-# Implements HTTP endpoints for creating, queuing, and retrieving BookFiend scan jobs.
+# Implements image-backed scan-job creation, queuing, and retrieval endpoints.
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.scan_job import ScanJob
 from app.schemas.job import ScanJobResponse
+from app.services.storage import store_uploaded_image
 from app.tasks.process_scan import process_scan
 
 
@@ -22,8 +23,15 @@ router = APIRouter(
     response_model=ScanJobResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_job(db: Session = Depends(get_db)) -> ScanJob:
+async def create_job(
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> ScanJob:
+    image_path, image_hash = await store_uploaded_image(image)
+
     job = ScanJob(
+        image_url=image_path,
+        image_hash=image_hash,
         status="queued",
         progress=0,
     )

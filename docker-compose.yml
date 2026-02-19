@@ -38,8 +38,11 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://bookfiend:bookfiend_dev@postgres:5432/bookfiend
       REDIS_URL: redis://redis:6379/0
+      UPLOAD_DIR: /app/uploads
     ports:
       - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +56,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://bookfiend:bookfiend_dev@postgres:5432/bookfiend
       REDIS_URL: redis://redis:6379/0
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,3 +79,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

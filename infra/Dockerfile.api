@@ -1,4 +1,4 @@
-# Defines the container used to run the BookFiend FastAPI backend.
+# Builds the Python image shared by the BookFiend FastAPI API and Celery worker.
 
 FROM python:3.12-slim
 
@@ -6,7 +6,9 @@ WORKDIR /app
 
 COPY apps/api/requirements.txt ./requirements.txt
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall -y opencv-python \
+    && pip install --no-cache-dir --force-reinstall --no-deps opencv-python-headless==5.0.0.93
 
 COPY apps/api/app ./app
 

@@ -1,0 +1,1 @@
+# Exposes BookFiend's reusable computer-vision and OCR pipeline modules.

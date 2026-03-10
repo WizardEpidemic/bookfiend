@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir --force-reinstall --no-deps opencv-python-headless==5.0.0.93
 
 COPY apps/api/app ./app
+COPY ml ./ml
 
 EXPOSE 8000
 

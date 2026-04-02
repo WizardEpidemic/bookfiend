@@ -1,4 +1,4 @@
-// Provides BookFiend's bookshelf upload, scan-job polling, and raw OCR results interface.
+// Provides BookFiend's bookshelf upload, scan progress, identified-book results, and raw OCR interface.
 
 "use client";
 
@@ -22,6 +22,20 @@ type OcrResult = {
   lines: OcrLine[];
 };
 
+type MatchedBook = {
+  open_library_key: string | null;
+  title: string;
+  author: string | null;
+  isbn: string | null;
+  candidate_text: string;
+  ocr_confidence: number;
+  match_score: number;
+  author_support: number;
+  candidate_source: string;
+  metadata_source: string;
+  query_used?: string | null;
+};
+
 type ScanJob = {
   id: string;
   status: string;
@@ -34,11 +48,13 @@ type ScanJob = {
       original_height?: number;
       processed_width?: number;
       processed_height?: number;
+      scale?: number;
       brightness?: number;
       blur_variance?: number;
     };
     ocr?: OcrResult;
-    books?: unknown[];
+    candidate_count?: number;
+    books?: MatchedBook[];
     unmatched_candidates?: unknown[];
   } | null;
   error_message: string | null;
@@ -49,6 +65,12 @@ type ScanJob = {
 
 const apiUrl =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+function formatStatus(status: string) {
+  return status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
 
 export default function Home() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -159,6 +181,9 @@ export default function Home() {
     }
   }
 
+  const identifiedBooks = job?.result_json?.books ?? [];
+  const ocrResult = job?.result_json?.ocr;
+
   return (
     <main className="flex min-h-screen justify-center p-8">
       <div className="w-full max-w-3xl py-12">
@@ -181,7 +206,7 @@ export default function Home() {
           )}
 
           {health && (
-            <div className="mt-4 flex gap-6 text-sm">
+            <div className="mt-4 flex flex-wrap gap-6 text-sm">
               <span>API: {health.api}</span>
               <span>PostgreSQL: {health.database}</span>
               <span>Redis: {health.redis}</span>
@@ -219,13 +244,15 @@ export default function Home() {
             {creatingJob ? "Starting scan..." : "Scan Bookshelf"}
           </button>
 
-          {jobError && <p className="mt-4">{jobError}</p>}
+          {jobError && (
+            <p className="mt-4 rounded-lg border p-3">{jobError}</p>
+          )}
 
           {job && (
             <div className="mt-6">
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-4">
                 <p>
-                  <strong>Status:</strong> {job.status}
+                  <strong>Status:</strong> {formatStatus(job.status)}
                 </p>
 
                 <p>{job.progress}%</p>
@@ -239,37 +266,100 @@ export default function Home() {
               </div>
 
               {job.status === "failed" && (
-                <p className="mt-4">
+                <p className="mt-4 rounded-lg border p-3">
                   Scan failed: {job.error_message ?? "Unknown error"}
                 </p>
               )}
 
-              {job.status === "completed" && job.result_json?.ocr && (
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold">
-                    Raw OCR Results
-                  </h3>
+              {job.status === "completed" && (
+                <>
+                  <div className="mt-8">
+                    <h3 className="text-2xl font-semibold">
+                      Identified Books
+                    </h3>
 
-                  <p className="mt-2 text-sm opacity-70">
-                    Detected {job.result_json.ocr.text_regions} text regions in{" "}
-                    {job.result_json.ocr.elapsed_seconds.toFixed(2)} seconds.
-                  </p>
+                    <p className="mt-2 text-sm opacity-70">
+                      Matched {identifiedBooks.length}{" "}
+                      {identifiedBooks.length === 1 ? "book" : "books"} using
+                      OCR and Open Library metadata.
+                    </p>
 
-                  <div className="mt-4 space-y-2">
-                    {job.result_json.ocr.lines.map((line, index) => (
-                      <div
-                        className="flex justify-between rounded-lg border p-3"
-                        key={`${line.text}-${index}`}
-                      >
-                        <span>{line.text}</span>
+                    {identifiedBooks.length > 0 ? (
+                      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                        {identifiedBooks.map((book) => (
+                          <article
+                            className="rounded-xl border p-5"
+                            key={
+                              book.open_library_key ??
+                              `${book.title}-${book.author}`
+                            }
+                          >
+                            <h4 className="text-lg font-semibold">
+                              {book.title}
+                            </h4>
 
-                        <span className="ml-4 text-sm opacity-70">
-                          {Math.round(line.confidence * 100)}%
-                        </span>
+                            <p className="mt-1 opacity-80">
+                              {book.author ?? "Unknown author"}
+                            </p>
+
+                            <div className="mt-4 space-y-1 text-sm opacity-70">
+                              <p>
+                                Metadata match:{" "}
+                                {Math.round(book.match_score * 100)}%
+                              </p>
+
+                              <p>
+                                OCR confidence:{" "}
+                                {Math.round(book.ocr_confidence * 100)}%
+                              </p>
+
+                              <p>
+                                Author evidence:{" "}
+                                {Math.round(book.author_support * 100)}%
+                              </p>
+
+                              {book.isbn && <p>ISBN: {book.isbn}</p>}
+                            </div>
+                          </article>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      <p className="mt-4 rounded-lg border p-4 opacity-70">
+                        No confident book matches were found for this image.
+                      </p>
+                    )}
                   </div>
-                </div>
+
+                  {ocrResult && (
+                    <div className="mt-10">
+                      <div className="border-t pt-8">
+                        <h3 className="text-xl font-semibold">
+                          Raw OCR Results
+                        </h3>
+
+                        <p className="mt-2 text-sm opacity-70">
+                          Detected {ocrResult.text_regions} text regions in{" "}
+                          {ocrResult.elapsed_seconds.toFixed(2)} seconds.
+                        </p>
+
+                        <div className="mt-4 space-y-2">
+                          {ocrResult.lines.map((line, index) => (
+                            <div
+                              className="flex items-center justify-between gap-4 rounded-lg border p-3"
+                              key={`${line.text}-${index}`}
+                            >
+                              <span>{line.text}</span>
+
+                              <span className="shrink-0 text-sm opacity-70">
+                                {Math.round(line.confidence * 100)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

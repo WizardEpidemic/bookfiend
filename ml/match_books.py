@@ -1,4 +1,4 @@
-# Resolves OCR-derived book candidates against Open Library using title similarity, author evidence, and ambiguity filtering.
+# Resolves OCR-derived book candidates against cached Open Library metadata using title similarity and author evidence.
 
 import re
 import time
@@ -6,6 +6,11 @@ from typing import Any
 
 import requests
 from rapidfuzz import fuzz
+
+from app.services.metadata_cache import (
+    cache_metadata,
+    get_cached_metadata,
+)
 
 
 OPEN_LIBRARY_SEARCH_URL = "https://openlibrary.org/search.json"
@@ -15,7 +20,8 @@ REQUEST_HEADERS = {
 }
 
 MATCH_THRESHOLD = 82.0
-AUTHOR_SUPPORT_THRESHOLD = 70.0
+AUTHOR_SUPPORT_THRESHOLD = 65.0
+SHORT_TITLE_AUTHOR_SUPPORT_THRESHOLD = 70.0
 MAX_CANDIDATES_TO_MATCH = 30
 
 
@@ -74,42 +80,45 @@ def _build_query_variants(
     return deduplicated[:3]
 
 
-def _search_open_library_by_title(
+def _fetch_open_library(
+    search_type: str,
     query: str,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], bool]:
+    cached_documents = get_cached_metadata(
+        search_type,
+        query,
+    )
+
+    if cached_documents is not None:
+        return cached_documents, True
+
+    params = {
+        search_type: query,
+        "limit": 10 if search_type == "title" else 8,
+        "fields": "key,title,author_name,isbn",
+    }
+
     response = requests.get(
         OPEN_LIBRARY_SEARCH_URL,
-        params={
-            "title": query,
-            "limit": 10,
-            "fields": "key,title,author_name,isbn",
-        },
+        params=params,
         headers=REQUEST_HEADERS,
         timeout=8,
     )
 
     response.raise_for_status()
 
-    return response.json().get("docs", [])
-
-
-def _search_open_library_general(
-    query: str,
-) -> list[dict[str, Any]]:
-    response = requests.get(
-        OPEN_LIBRARY_SEARCH_URL,
-        params={
-            "q": query,
-            "limit": 8,
-            "fields": "key,title,author_name,isbn",
-        },
-        headers=REQUEST_HEADERS,
-        timeout=8,
+    documents = response.json().get(
+        "docs",
+        [],
     )
 
-    response.raise_for_status()
+    cache_metadata(
+        search_type,
+        query,
+        documents,
+    )
 
-    return response.json().get("docs", [])
+    return documents, False
 
 
 def _length_similarity(
@@ -120,6 +129,7 @@ def _length_similarity(
         len(_comparison_text(left)),
         1,
     )
+
     right_length = max(
         len(_comparison_text(right)),
         1,
@@ -138,7 +148,9 @@ def _author_support(
     document: dict[str, Any],
     ocr_lines: list[dict[str, Any]],
 ) -> float:
-    authors = document.get("author_name") or []
+    authors = document.get(
+        "author_name"
+    ) or []
 
     if not authors:
         return 0.0
@@ -198,7 +210,9 @@ def _author_support(
             else 0.0
         )
 
-        compact_author = _compact_text(author)
+        compact_author = _compact_text(
+            author
+        )
 
         full_name_score = 0.0
 
@@ -207,11 +221,12 @@ def _author_support(
                 ocr_text
             )
 
-            # Avoid treating tiny fragments as evidence
-            # for a much longer author name.
             if len(compact_ocr) < max(
                 4,
-                int(len(compact_author) * 0.6),
+                int(
+                    len(compact_author)
+                    * 0.6
+                ),
             ):
                 continue
 
@@ -242,10 +257,17 @@ def _title_score(
     query_text: str,
     document: dict[str, Any],
 ) -> float:
-    title = str(document.get("title") or "")
+    title = str(
+        document.get("title") or ""
+    )
 
-    normalized_query = _comparison_text(query_text)
-    normalized_title = _comparison_text(title)
+    normalized_query = _comparison_text(
+        query_text
+    )
+
+    normalized_title = _comparison_text(
+        title
+    )
 
     if normalized_query == normalized_title:
         return 100.0
@@ -272,7 +294,10 @@ def _title_score(
 
     adjusted_token_score = (
         token_score
-        * max(length_factor, 0.55)
+        * max(
+            length_factor,
+            0.55,
+        )
     )
 
     return max(
@@ -298,13 +323,18 @@ def _find_best_match(
     best_author_support = 0.0
     best_ranking_score = 0.0
 
-    normalized_query = _comparison_text(query)
+    normalized_query = _comparison_text(
+        query
+    )
 
     exact_title_count = sum(
         1
         for document in documents
         if _comparison_text(
-            str(document.get("title") or "")
+            str(
+                document.get("title")
+                or ""
+            )
         )
         == normalized_query
     )
@@ -323,14 +353,26 @@ def _find_best_match(
 
         ranking_score = (
             title_score
-            + min(author_support * 0.15, 15.0)
+            + min(
+                author_support * 0.15,
+                15.0,
+            )
         )
 
-        if ranking_score > best_ranking_score:
-            best_ranking_score = ranking_score
+        if (
+            ranking_score
+            > best_ranking_score
+        ):
+            best_ranking_score = (
+                ranking_score
+            )
             best_document = document
-            best_title_score = title_score
-            best_author_support = author_support
+            best_title_score = (
+                title_score
+            )
+            best_author_support = (
+                author_support
+            )
 
     return (
         best_document,
@@ -343,13 +385,24 @@ def _find_best_match(
 def match_book_candidates(
     candidates: list[dict[str, Any]],
     ocr_result: dict[str, Any],
-) -> dict[str, list[dict[str, Any]]]:
-    matched_books: list[dict[str, Any]] = []
-    unmatched_candidates: list[dict[str, Any]] = []
+) -> dict[str, Any]:
+    matched_books: list[
+        dict[str, Any]
+    ] = []
+
+    unmatched_candidates: list[
+        dict[str, Any]
+    ] = []
 
     seen_books: set[str] = set()
 
-    ocr_lines = ocr_result.get("lines", [])
+    ocr_lines = ocr_result.get(
+        "lines",
+        [],
+    )
+
+    cache_hits = 0
+    cache_misses = 0
 
     for candidate in candidates[
         :MAX_CANDIDATES_TO_MATCH
@@ -368,11 +421,20 @@ def match_book_candidates(
             candidate_text
         ):
             try:
-                documents = (
-                    _search_open_library_by_title(
-                        query
-                    )
+                (
+                    documents,
+                    cache_hit,
+                ) = _fetch_open_library(
+                    "title",
+                    query,
                 )
+
+                if cache_hit:
+                    cache_hits += 1
+                else:
+                    cache_misses += 1
+                    time.sleep(0.2)
+
             except requests.RequestException:
                 request_failed = True
                 continue
@@ -400,12 +462,16 @@ def match_book_candidates(
             current_ranking_score = (
                 best_score
                 + min(
-                    best_author_support * 0.15,
+                    best_author_support
+                    * 0.15,
                     15.0,
                 )
             )
 
-            if ranking_score > current_ranking_score:
+            if (
+                ranking_score
+                > current_ranking_score
+            ):
                 best_document = document
                 best_score = score
                 best_author_support = (
@@ -416,8 +482,6 @@ def match_book_candidates(
                 )
                 best_query = query
 
-            time.sleep(0.2)
-
             if (
                 best_score >= 95
                 and best_author_support
@@ -427,11 +491,19 @@ def match_book_candidates(
 
         if best_score < MATCH_THRESHOLD:
             try:
-                documents = (
-                    _search_open_library_general(
-                        candidate_text
-                    )
+                (
+                    documents,
+                    cache_hit,
+                ) = _fetch_open_library(
+                    "q",
+                    candidate_text,
                 )
+
+                if cache_hit:
+                    cache_hits += 1
+                else:
+                    cache_misses += 1
+                    time.sleep(0.2)
 
                 (
                     document,
@@ -448,7 +520,8 @@ def match_book_candidates(
                 ranking_score = (
                     score
                     + min(
-                        author_support * 0.15,
+                        author_support
+                        * 0.15,
                         15.0,
                     )
                 )
@@ -456,12 +529,16 @@ def match_book_candidates(
                 current_ranking_score = (
                     best_score
                     + min(
-                        best_author_support * 0.15,
+                        best_author_support
+                        * 0.15,
                         15.0,
                     )
                 )
 
-                if ranking_score > current_ranking_score:
+                if (
+                    ranking_score
+                    > current_ranking_score
+                ):
                     best_document = document
                     best_score = score
                     best_author_support = (
@@ -470,12 +547,18 @@ def match_book_candidates(
                     best_exact_title_count = (
                         exact_title_count
                     )
-                    best_query = candidate_text
+                    best_query = (
+                        candidate_text
+                    )
 
             except requests.RequestException:
                 request_failed = True
 
-            time.sleep(0.2)
+        candidate_word_count = len(
+            _comparison_text(
+                candidate_text
+            ).split()
+        )
 
         ambiguous_without_author = (
             best_exact_title_count > 1
@@ -483,10 +566,17 @@ def match_book_candidates(
             < AUTHOR_SUPPORT_THRESHOLD
         )
 
+        short_title_without_author = (
+            candidate_word_count <= 2
+            and best_author_support
+            < SHORT_TITLE_AUTHOR_SUPPORT_THRESHOLD
+        )
+
         if (
             best_document is None
             or best_score < MATCH_THRESHOLD
             or ambiguous_without_author
+            or short_title_without_author
         ):
             unmatched_candidates.append(
                 {
@@ -496,6 +586,9 @@ def match_book_candidates(
                     ),
                     "ambiguous": (
                         ambiguous_without_author
+                    ),
+                    "insufficient_author_support": (
+                        short_title_without_author
                     ),
                 }
             )
@@ -514,7 +607,9 @@ def match_book_candidates(
         seen_books.add(book_key)
 
         authors = (
-            best_document.get("author_name")
+            best_document.get(
+                "author_name"
+            )
             or []
         )
 
@@ -526,10 +621,14 @@ def match_book_candidates(
         matched_books.append(
             {
                 "open_library_key": (
-                    best_document.get("key")
+                    best_document.get(
+                        "key"
+                    )
                 ),
                 "title": (
-                    best_document.get("title")
+                    best_document.get(
+                        "title"
+                    )
                 ),
                 "author": (
                     authors[0]
@@ -541,7 +640,9 @@ def match_book_candidates(
                     if isbns
                     else None
                 ),
-                "candidate_text": candidate_text,
+                "candidate_text": (
+                    candidate_text
+                ),
                 "ocr_confidence": round(
                     candidate[
                         "ocr_confidence"
@@ -553,7 +654,8 @@ def match_book_candidates(
                     4,
                 ),
                 "author_support": round(
-                    best_author_support / 100,
+                    best_author_support
+                    / 100,
                     4,
                 ),
                 "candidate_source": (
@@ -562,7 +664,9 @@ def match_book_candidates(
                 "metadata_source": (
                     "open_library"
                 ),
-                "query_used": best_query,
+                "query_used": (
+                    best_query
+                ),
             }
         )
 
@@ -571,4 +675,8 @@ def match_book_candidates(
         "unmatched_candidates": (
             unmatched_candidates[:20]
         ),
+        "cache": {
+            "hits": cache_hits,
+            "misses": cache_misses,
+        },
     }

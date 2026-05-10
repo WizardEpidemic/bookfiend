@@ -1,0 +1,122 @@
+[
+  {
+    "title": "Mistborn: The Final Empire",
+    "author": "Brandon Sanderson",
+    "genres": ["fantasy", "high-fantasy", "adventure"],
+    "description": "Epic fantasy with political rebellion, a detailed magic system, found family, and an oppressive empire."
+  },
+  {
+    "title": "The Will of the Many",
+    "author": "James Islington",
+    "genres": ["fantasy", "dark-academia", "dystopian"],
+    "description": "A young man infiltrates an elite academy inside a rigid hierarchical empire while hiding his true identity."
+  },
+  {
+    "title": "The Fifth Season",
+    "author": "N. K. Jemisin",
+    "genres": ["fantasy", "science-fiction", "dystopian"],
+    "description": "A fractured civilization faces repeated apocalypse in a story blending speculative science, oppression, survival, and powerful magic."
+  },
+  {
+    "title": "Babel",
+    "author": "R. F. Kuang",
+    "genres": ["fantasy", "dark-academia", "historical-fantasy"],
+    "description": "Dark academic fantasy about language, empire, colonialism, translation, and resistance."
+  },
+  {
+    "title": "Six of Crows",
+    "author": "Leigh Bardugo",
+    "genres": ["fantasy", "young-adult", "heist"],
+    "description": "A crew of criminals attempts an impossible heist in a dangerous fantasy city."
+  },
+  {
+    "title": "The Lies of Locke Lamora",
+    "author": "Scott Lynch",
+    "genres": ["fantasy", "crime", "adventure"],
+    "description": "A group of gifted thieves runs elaborate confidence schemes in a violent fantasy city."
+  },
+  {
+    "title": "The Blade Itself",
+    "author": "Joe Abercrombie",
+    "genres": ["fantasy", "dark-fantasy", "grimdark"],
+    "description": "Character-driven dark fantasy full of political conflict, morally complicated characters, violence, and war."
+  },
+  {
+    "title": "A Darker Shade of Magic",
+    "author": "V. E. Schwab",
+    "genres": ["fantasy", "adventure", "magic"],
+    "description": "A magician travels between parallel versions of London and becomes entangled in dangerous forbidden magic."
+  },
+  {
+    "title": "The Grace of Kings",
+    "author": "Ken Liu",
+    "genres": ["fantasy", "epic-fantasy", "war"],
+    "description": "Epic fantasy about rebellion, friendship, political power, military conflict, and the creation of a new empire."
+  },
+  {
+    "title": "Scythe",
+    "author": "Neal Shusterman",
+    "genres": ["dystopian", "young-adult", "science-fiction"],
+    "description": "In a world without natural death, selected humans are trained to control population through sanctioned killing."
+  },
+  {
+    "title": "Legend",
+    "author": "Marie Lu",
+    "genres": ["dystopian", "young-adult", "science-fiction"],
+    "description": "Two teenagers from opposite sides of a militarized authoritarian society uncover government secrets."
+  },
+  {
+    "title": "The Passage",
+    "author": "Justin Cronin",
+    "genres": ["horror", "science-fiction", "post-apocalyptic"],
+    "description": "A government experiment triggers a catastrophic outbreak and a long struggle for human survival."
+  },
+  {
+    "title": "The Troop",
+    "author": "Nick Cutter",
+    "genres": ["horror", "thriller", "body-horror"],
+    "description": "A wilderness trip becomes a terrifying survival story involving infection, isolation, and body horror."
+  },
+  {
+    "title": "Misery",
+    "author": "Stephen King",
+    "genres": ["horror", "thriller", "psychological"],
+    "description": "An injured novelist is held captive by an obsessive fan in a tense psychological horror story."
+  },
+  {
+    "title": "Pet Sematary",
+    "author": "Stephen King",
+    "genres": ["horror", "supernatural", "psychological"],
+    "description": "A family discovers a burial ground with terrifying supernatural consequences."
+  },
+  {
+    "title": "The Silent Patient",
+    "author": "Alex Michaelides",
+    "genres": ["thriller", "mystery", "psychological"],
+    "description": "A psychotherapist becomes obsessed with discovering why a woman stopped speaking after being accused of murder."
+  },
+  {
+    "title": "Gone Girl",
+    "author": "Gillian Flynn",
+    "genres": ["thriller", "mystery", "psychological"],
+    "description": "A marriage becomes the center of a disappearance investigation filled with manipulation and unreliable narratives."
+  },
+  {
+    "title": "The Seven Husbands of Evelyn Hugo",
+    "author": "Taylor Jenkins Reid",
+    "genres": ["historical-fiction", "romance", "drama"],
+    "description": "An aging film star recounts her complicated life, relationships, ambition, and hidden history."
+  },
+  {
+    "title": "Circe",
+    "author": "Madeline Miller",
+    "genres": ["fantasy", "mythology", "historical-fantasy"],
+    "description": "A reimagining of Greek mythology centered on the witch Circe, exile, power, identity, and transformation."
+  },
+  {
+    "title": "Piranesi",
+    "author": "Susanna Clarke",
+    "genres": ["fantasy", "mystery", "literary"],
+    "description": "A mysterious man explores an immense impossible house while slowly uncovering the truth about his world."
+  }
+]

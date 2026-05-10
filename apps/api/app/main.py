@@ -1,4 +1,4 @@
-# Creates the BookFiend FastAPI application and registers health, scan-job, and Goodreads endpoints.
+# Creates the BookFiend FastAPI application and registers health, scanning, Goodreads, and recommendation endpoints.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import (
@@ -16,6 +16,9 @@ from app.routes.goodreads import (
 )
 from app.routes.jobs import (
     router as jobs_router,
+)
+from app.routes.recommendations import (
+    router as recommendations_router,
 )
 
 
@@ -43,6 +46,10 @@ app.include_router(
 
 app.include_router(
     goodreads_router
+)
+
+app.include_router(
+    recommendations_router
 )
 
 

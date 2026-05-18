@@ -1,4 +1,4 @@
-// Provides BookFiend's bookshelf upload, scan progress, identified-book results, and raw OCR interface.
+// Provides BookFiend's bookshelf scanning, Goodreads import, preference summary, and personalized recommendation interface.
 
 "use client";
 
@@ -56,11 +56,38 @@ type ScanJob = {
     candidate_count?: number;
     books?: MatchedBook[];
     unmatched_candidates?: unknown[];
+    metadata_cache?: {
+      hits: number;
+      misses: number;
+    };
   } | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+};
+
+type GoodreadsImportResponse = {
+  imported_count: number;
+  rated_count: number;
+  shelf_count: number;
+  favorite_authors: string[];
+  favorite_shelves: string[];
+};
+
+type RecommendationItem = {
+  title: string;
+  author: string;
+  genres: string[];
+  score: number;
+  similarity_score: number;
+  reasons: string[];
+};
+
+type RecommendationResponse = {
+  profile_book_count: number;
+  candidate_count: number;
+  recommendations: RecommendationItem[];
 };
 
 const apiUrl =
@@ -70,6 +97,10 @@ function formatStatus(status: string) {
   return status
     .replaceAll("_", " ")
     .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function percentage(value: number) {
+  return `${Math.round(value * 100)}%`;
 }
 
 export default function Home() {
@@ -82,6 +113,19 @@ export default function Home() {
   const [job, setJob] = useState<ScanJob | null>(null);
   const [jobError, setJobError] = useState<string | null>(null);
   const [creatingJob, setCreatingJob] = useState(false);
+
+  const [goodreadsFile, setGoodreadsFile] = useState<File | null>(null);
+  const [importingGoodreads, setImportingGoodreads] = useState(false);
+  const [goodreadsError, setGoodreadsError] = useState<string | null>(null);
+  const [goodreadsResult, setGoodreadsResult] =
+    useState<GoodreadsImportResponse | null>(null);
+
+  const [recommendations, setRecommendations] =
+    useState<RecommendationResponse | null>(null);
+  const [recommendationError, setRecommendationError] =
+    useState<string | null>(null);
+  const [loadingRecommendations, setLoadingRecommendations] =
+    useState(false);
 
   useEffect(() => {
     fetch(`${apiUrl}/health`)
@@ -131,7 +175,9 @@ export default function Home() {
     };
   }, [previewUrl]);
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+  function handleShelfFileChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0] ?? null;
 
     if (previewUrl) {
@@ -147,6 +193,15 @@ export default function Home() {
     } else {
       setPreviewUrl(null);
     }
+  }
+
+  function handleGoodreadsFileChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0] ?? null;
+
+    setGoodreadsFile(file);
+    setGoodreadsError(null);
   }
 
   async function startScan() {
@@ -181,12 +236,82 @@ export default function Home() {
     }
   }
 
+  async function fetchRecommendations() {
+    setLoadingRecommendations(true);
+    setRecommendationError(null);
+
+    try {
+      const response = await fetch(
+        `${apiUrl}/recommendations?limit=8`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Could not retrieve recommendations.");
+      }
+
+      const data: RecommendationResponse = await response.json();
+
+      setRecommendations(data);
+    } catch {
+      setRecommendationError(
+        "Could not generate BookFiend recommendations.",
+      );
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  }
+
+  async function importGoodreads() {
+    if (!goodreadsFile) {
+      setGoodreadsError("Choose a Goodreads CSV file first.");
+      return;
+    }
+
+    setImportingGoodreads(true);
+    setGoodreadsError(null);
+    setGoodreadsResult(null);
+    setRecommendations(null);
+    setRecommendationError(null);
+
+    const formData = new FormData();
+    formData.append("csv_file", goodreadsFile);
+
+    try {
+      const response = await fetch(`${apiUrl}/goodreads/import`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+
+        throw new Error(
+          errorPayload?.detail ?? "Could not import Goodreads CSV.",
+        );
+      }
+
+      const result: GoodreadsImportResponse = await response.json();
+
+      setGoodreadsResult(result);
+
+      await fetchRecommendations();
+    } catch (error) {
+      if (error instanceof Error) {
+        setGoodreadsError(error.message);
+      } else {
+        setGoodreadsError("Could not import Goodreads CSV.");
+      }
+    } finally {
+      setImportingGoodreads(false);
+    }
+  }
+
   const identifiedBooks = job?.result_json?.books ?? [];
   const ocrResult = job?.result_json?.ocr;
 
   return (
     <main className="flex min-h-screen justify-center p-8">
-      <div className="w-full max-w-3xl py-12">
+      <div className="w-full max-w-4xl py-12">
         <header className="text-center">
           <h1 className="text-5xl font-bold">BookFiend</h1>
 
@@ -224,7 +349,7 @@ export default function Home() {
           <input
             accept="image/jpeg,image/png,image/webp"
             className="mt-5 block w-full"
-            onChange={handleFileChange}
+            onChange={handleShelfFileChange}
             type="file"
           />
 
@@ -305,17 +430,17 @@ export default function Home() {
                             <div className="mt-4 space-y-1 text-sm opacity-70">
                               <p>
                                 Metadata match:{" "}
-                                {Math.round(book.match_score * 100)}%
+                                {percentage(book.match_score)}
                               </p>
 
                               <p>
                                 OCR confidence:{" "}
-                                {Math.round(book.ocr_confidence * 100)}%
+                                {percentage(book.ocr_confidence)}
                               </p>
 
                               <p>
                                 Author evidence:{" "}
-                                {Math.round(book.author_support * 100)}%
+                                {percentage(book.author_support)}
                               </p>
 
                               {book.isbn && <p>ISBN: {book.isbn}</p>}
@@ -331,36 +456,221 @@ export default function Home() {
                   </div>
 
                   {ocrResult && (
-                    <div className="mt-10">
-                      <div className="border-t pt-8">
-                        <h3 className="text-xl font-semibold">
-                          Raw OCR Results
-                        </h3>
+                    <details className="mt-10 border-t pt-8">
+                      <summary className="cursor-pointer text-xl font-semibold">
+                        Raw OCR Results
+                      </summary>
 
-                        <p className="mt-2 text-sm opacity-70">
-                          Detected {ocrResult.text_regions} text regions in{" "}
-                          {ocrResult.elapsed_seconds.toFixed(2)} seconds.
-                        </p>
+                      <p className="mt-3 text-sm opacity-70">
+                        Detected {ocrResult.text_regions} text regions in{" "}
+                        {ocrResult.elapsed_seconds.toFixed(2)} seconds.
+                      </p>
 
-                        <div className="mt-4 space-y-2">
-                          {ocrResult.lines.map((line, index) => (
-                            <div
-                              className="flex items-center justify-between gap-4 rounded-lg border p-3"
-                              key={`${line.text}-${index}`}
-                            >
-                              <span>{line.text}</span>
+                      <div className="mt-4 space-y-2">
+                        {ocrResult.lines.map((line, index) => (
+                          <div
+                            className="flex items-center justify-between gap-4 rounded-lg border p-3"
+                            key={`${line.text}-${index}`}
+                          >
+                            <span>{line.text}</span>
 
-                              <span className="shrink-0 text-sm opacity-70">
-                                {Math.round(line.confidence * 100)}%
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                            <span className="shrink-0 text-sm opacity-70">
+                              {percentage(line.confidence)}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    </div>
+                    </details>
                   )}
                 </>
               )}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-6 rounded-xl border p-6">
+          <h2 className="text-xl font-semibold">
+            Personalize with Goodreads
+          </h2>
+
+          <p className="mt-2 text-sm opacity-70">
+            Import your Goodreads library export to build a preference profile
+            from your ratings and shelves.
+          </p>
+
+          <input
+            accept=".csv,text/csv"
+            className="mt-5 block w-full"
+            onChange={handleGoodreadsFileChange}
+            type="file"
+          />
+
+          <button
+            className="mt-5 rounded-lg border px-5 py-2 font-medium disabled:opacity-50"
+            disabled={!goodreadsFile || importingGoodreads}
+            onClick={importGoodreads}
+          >
+            {importingGoodreads
+              ? "Importing..."
+              : "Import Goodreads & Recommend"}
+          </button>
+
+          {goodreadsError && (
+            <p className="mt-4 rounded-lg border p-3">
+              {goodreadsError}
+            </p>
+          )}
+
+          {goodreadsResult && (
+            <div className="mt-7">
+              <h3 className="text-lg font-semibold">
+                Reading Profile
+              </h3>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div className="rounded-lg border p-4">
+                  <p className="text-2xl font-semibold">
+                    {goodreadsResult.imported_count}
+                  </p>
+
+                  <p className="mt-1 text-sm opacity-70">
+                    Imported books
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-4">
+                  <p className="text-2xl font-semibold">
+                    {goodreadsResult.rated_count}
+                  </p>
+
+                  <p className="mt-1 text-sm opacity-70">
+                    Rated books
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-4">
+                  <p className="text-2xl font-semibold">
+                    {goodreadsResult.shelf_count}
+                  </p>
+
+                  <p className="mt-1 text-sm opacity-70">
+                    Reading shelves
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border p-4">
+                  <h4 className="font-semibold">
+                    Favorite Authors
+                  </h4>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {goodreadsResult.favorite_authors.map((author) => (
+                      <span
+                        className="rounded-full border px-3 py-1 text-sm"
+                        key={author}
+                      >
+                        {author}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-4">
+                  <h4 className="font-semibold">
+                    Favorite Shelves
+                  </h4>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {goodreadsResult.favorite_shelves.map((shelf) => (
+                      <span
+                        className="rounded-full border px-3 py-1 text-sm"
+                        key={shelf}
+                      >
+                        {shelf}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {loadingRecommendations && (
+            <p className="mt-6">Ranking recommendations...</p>
+          )}
+
+          {recommendationError && (
+            <p className="mt-6 rounded-lg border p-3">
+              {recommendationError}
+            </p>
+          )}
+
+          {recommendations && (
+            <div className="mt-8 border-t pt-8">
+              <h3 className="text-2xl font-semibold">
+                Recommendations
+              </h3>
+
+              <p className="mt-2 text-sm opacity-70">
+                Ranked {recommendations.candidate_count} candidate books from a
+                seeded catalog using your {recommendations.profile_book_count}{" "}
+                imported Goodreads books.
+              </p>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {recommendations.recommendations.map(
+                  (recommendation, index) => (
+                    <article
+                      className="rounded-xl border p-5"
+                      key={`${recommendation.title}-${recommendation.author}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm opacity-60">
+                            #{index + 1}
+                          </p>
+
+                          <h4 className="mt-1 text-lg font-semibold">
+                            {recommendation.title}
+                          </h4>
+
+                          <p className="mt-1 opacity-80">
+                            {recommendation.author}
+                          </p>
+                        </div>
+
+                        <span className="shrink-0 rounded-full border px-3 py-1 text-sm">
+                          {percentage(recommendation.score)}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {recommendation.genres.map((genre) => (
+                          <span
+                            className="rounded-full border px-2 py-1 text-xs opacity-80"
+                            key={genre}
+                          >
+                            {genre}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="mt-4 space-y-2 text-sm opacity-75">
+                        {recommendation.reasons.map((reason) => (
+                          <p key={reason}>{reason}</p>
+                        ))}
+                      </div>
+
+                      <p className="mt-4 text-xs opacity-50">
+                        TF-IDF similarity:{" "}
+                        {percentage(recommendation.similarity_score)}
+                      </p>
+                    </article>
+                  ),
+                )}
+              </div>
             </div>
           )}
         </section>

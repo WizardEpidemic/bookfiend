@@ -1,4 +1,4 @@
-// Provides BookFiend's bookshelf scanning, Goodreads import, preference summary, and personalized recommendation interface.
+// Provides BookFiend's bookshelf scanning, Goodreads import, preference summary, and personalized recommendation interface. Includes demo as well.
 
 "use client";
 
@@ -36,31 +36,39 @@ type MatchedBook = {
   query_used?: string | null;
 };
 
+type ScanResultPayload = {
+  simulated?: boolean;
+  pipeline_stage?: string;
+
+  image_metrics?: {
+    original_width?: number;
+    original_height?: number;
+    processed_width?: number;
+    processed_height?: number;
+    scale?: number;
+    brightness?: number;
+    blur_variance?: number;
+  };
+
+  ocr?: OcrResult;
+
+  candidate_count?: number;
+
+  books?: MatchedBook[];
+
+  unmatched_candidates?: unknown[];
+
+  metadata_cache?: {
+    hits: number;
+    misses: number;
+  };
+};
+
 type ScanJob = {
   id: string;
   status: string;
   progress: number;
-  result_json: {
-    simulated?: boolean;
-    pipeline_stage?: string;
-    image_metrics?: {
-      original_width?: number;
-      original_height?: number;
-      processed_width?: number;
-      processed_height?: number;
-      scale?: number;
-      brightness?: number;
-      blur_variance?: number;
-    };
-    ocr?: OcrResult;
-    candidate_count?: number;
-    books?: MatchedBook[];
-    unmatched_candidates?: unknown[];
-    metadata_cache?: {
-      hits: number;
-      misses: number;
-    };
-  } | null;
+  result_json: ScanResultPayload | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;
@@ -93,6 +101,9 @@ type RecommendationResponse = {
 const apiUrl =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+const demoMode =
+  process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
 function formatStatus(status: string) {
   return status
     .replaceAll("_", " ")
@@ -101,6 +112,10 @@ function formatStatus(status: string) {
 
 function percentage(value: number) {
   return `${Math.round(value * 100)}%`;
+}
+
+function currentTimestamp() {
+  return new Date().toISOString();
 }
 
 export default function Home() {
@@ -115,23 +130,43 @@ export default function Home() {
   const [creatingJob, setCreatingJob] = useState(false);
 
   const [goodreadsFile, setGoodreadsFile] = useState<File | null>(null);
+
   const [importingGoodreads, setImportingGoodreads] = useState(false);
-  const [goodreadsError, setGoodreadsError] = useState<string | null>(null);
+
+  const [goodreadsError, setGoodreadsError] =
+    useState<string | null>(null);
+
   const [goodreadsResult, setGoodreadsResult] =
     useState<GoodreadsImportResponse | null>(null);
 
   const [recommendations, setRecommendations] =
     useState<RecommendationResponse | null>(null);
+
   const [recommendationError, setRecommendationError] =
     useState<string | null>(null);
+
   const [loadingRecommendations, setLoadingRecommendations] =
     useState(false);
 
+  const [loadingDemoScan, setLoadingDemoScan] =
+    useState(false);
+
+  const [
+    loadingDemoRecommendations,
+    setLoadingDemoRecommendations,
+  ] = useState(false);
+
   useEffect(() => {
+    if (demoMode) {
+      return;
+    }
+
     fetch(`${apiUrl}/health`)
       .then((response) => {
         if (!response.ok) {
-          throw new Error("API health check failed.");
+          throw new Error(
+            "API health check failed.",
+          );
         }
 
         return response.json();
@@ -140,29 +175,47 @@ export default function Home() {
         setHealth(data);
       })
       .catch(() => {
-        setHealthError("Could not connect to the BookFiend API.");
+        setHealthError(
+          "Could not connect to the BookFiend API.",
+        );
       });
   }, []);
 
   useEffect(() => {
-    if (!job || job.status === "completed" || job.status === "failed") {
+    if (
+      demoMode ||
+      !job ||
+      job.status === "completed" ||
+      job.status === "failed"
+    ) {
       return;
     }
 
-    const timeout = setTimeout(async () => {
-      try {
-        const response = await fetch(`${apiUrl}/jobs/${job.id}`);
+    const timeout = setTimeout(
+      async () => {
+        try {
+          const response = await fetch(
+            `${apiUrl}/jobs/${job.id}`,
+          );
 
-        if (!response.ok) {
-          throw new Error("Could not retrieve scan job.");
+          if (!response.ok) {
+            throw new Error(
+              "Could not retrieve scan job.",
+            );
+          }
+
+          const updatedJob: ScanJob =
+            await response.json();
+
+          setJob(updatedJob);
+        } catch {
+          setJobError(
+            "Could not retrieve scan progress.",
+          );
         }
-
-        const updatedJob: ScanJob = await response.json();
-        setJob(updatedJob);
-      } catch {
-        setJobError("Could not retrieve scan progress.");
-      }
-    }, 750);
+      },
+      750,
+    );
 
     return () => clearTimeout(timeout);
   }, [job]);
@@ -170,7 +223,9 @@ export default function Home() {
   useEffect(() => {
     return () => {
       if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+        URL.revokeObjectURL(
+          previewUrl,
+        );
       }
     };
   }, [previewUrl]);
@@ -178,10 +233,13 @@ export default function Home() {
   function handleShelfFileChange(
     event: ChangeEvent<HTMLInputElement>,
   ) {
-    const file = event.target.files?.[0] ?? null;
+    const file =
+      event.target.files?.[0] ?? null;
 
     if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
+      URL.revokeObjectURL(
+        previewUrl,
+      );
     }
 
     setSelectedFile(file);
@@ -189,7 +247,9 @@ export default function Home() {
     setJobError(null);
 
     if (file) {
-      setPreviewUrl(URL.createObjectURL(file));
+      setPreviewUrl(
+        URL.createObjectURL(file),
+      );
     } else {
       setPreviewUrl(null);
     }
@@ -198,7 +258,8 @@ export default function Home() {
   function handleGoodreadsFileChange(
     event: ChangeEvent<HTMLInputElement>,
   ) {
-    const file = event.target.files?.[0] ?? null;
+    const file =
+      event.target.files?.[0] ?? null;
 
     setGoodreadsFile(file);
     setGoodreadsError(null);
@@ -206,7 +267,10 @@ export default function Home() {
 
   async function startScan() {
     if (!selectedFile) {
-      setJobError("Choose a bookshelf image first.");
+      setJobError(
+        "Choose a bookshelf image first.",
+      );
+
       return;
     }
 
@@ -215,24 +279,78 @@ export default function Home() {
     setJob(null);
 
     const formData = new FormData();
-    formData.append("image", selectedFile);
+
+    formData.append(
+      "image",
+      selectedFile,
+    );
 
     try {
-      const response = await fetch(`${apiUrl}/jobs`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `${apiUrl}/jobs`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
-        throw new Error("Could not create scan job.");
+        throw new Error(
+          "Could not create scan job.",
+        );
       }
 
-      const createdJob: ScanJob = await response.json();
+      const createdJob: ScanJob =
+        await response.json();
+
       setJob(createdJob);
     } catch {
-      setJobError("Could not start the BookFiend scan.");
+      setJobError(
+        "Could not start the BookFiend scan.",
+      );
     } finally {
       setCreatingJob(false);
+    }
+  }
+
+  async function loadDemoScan() {
+    setLoadingDemoScan(true);
+    setJobError(null);
+    setJob(null);
+
+    try {
+      const response = await fetch(
+        "/demo-result.json",
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Could not load the sample scan.",
+        );
+      }
+
+      const result: ScanResultPayload =
+        await response.json();
+
+      const timestamp =
+        currentTimestamp();
+
+      setJob({
+        id: "public-demo-scan",
+        status: "completed",
+        progress: 100,
+        result_json: result,
+        error_message: null,
+        created_at: timestamp,
+        updated_at: timestamp,
+        completed_at: timestamp,
+      });
+    } catch {
+      setJobError(
+        "Could not load the public BookFiend demo.",
+      );
+    } finally {
+      setLoadingDemoScan(false);
     }
   }
 
@@ -246,10 +364,13 @@ export default function Home() {
       );
 
       if (!response.ok) {
-        throw new Error("Could not retrieve recommendations.");
+        throw new Error(
+          "Could not retrieve recommendations.",
+        );
       }
 
-      const data: RecommendationResponse = await response.json();
+      const data: RecommendationResponse =
+        await response.json();
 
       setRecommendations(data);
     } catch {
@@ -263,7 +384,10 @@ export default function Home() {
 
   async function importGoodreads() {
     if (!goodreadsFile) {
-      setGoodreadsError("Choose a Goodreads CSV file first.");
+      setGoodreadsError(
+        "Choose a Goodreads CSV file first.",
+      );
+
       return;
     }
 
@@ -274,129 +398,328 @@ export default function Home() {
     setRecommendationError(null);
 
     const formData = new FormData();
-    formData.append("csv_file", goodreadsFile);
+
+    formData.append(
+      "csv_file",
+      goodreadsFile,
+    );
 
     try {
-      const response = await fetch(`${apiUrl}/goodreads/import`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `${apiUrl}/goodreads/import`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => null);
+        const errorPayload =
+          await response
+            .json()
+            .catch(() => null);
 
         throw new Error(
-          errorPayload?.detail ?? "Could not import Goodreads CSV.",
+          errorPayload?.detail ??
+            "Could not import Goodreads CSV.",
         );
       }
 
-      const result: GoodreadsImportResponse = await response.json();
+      const result: GoodreadsImportResponse =
+        await response.json();
 
       setGoodreadsResult(result);
 
       await fetchRecommendations();
     } catch (error) {
       if (error instanceof Error) {
-        setGoodreadsError(error.message);
+        setGoodreadsError(
+          error.message,
+        );
       } else {
-        setGoodreadsError("Could not import Goodreads CSV.");
+        setGoodreadsError(
+          "Could not import Goodreads CSV.",
+        );
       }
     } finally {
       setImportingGoodreads(false);
     }
   }
 
-  const identifiedBooks = job?.result_json?.books ?? [];
-  const ocrResult = job?.result_json?.ocr;
+  async function loadDemoRecommendations() {
+    setLoadingDemoRecommendations(
+      true,
+    );
+
+    setGoodreadsError(null);
+    setRecommendationError(null);
+    setGoodreadsResult(null);
+    setRecommendations(null);
+
+    try {
+      const [
+        profileResponse,
+        recommendationResponse,
+      ] = await Promise.all([
+        fetch(
+          "/demo-goodreads-profile.json",
+        ),
+        fetch(
+          "/demo-recommendations.json",
+        ),
+      ]);
+
+      if (
+        !profileResponse.ok ||
+        !recommendationResponse.ok
+      ) {
+        throw new Error(
+          "Could not load recommendation demo data.",
+        );
+      }
+
+      const profile: GoodreadsImportResponse =
+        await profileResponse.json();
+
+      const recommendationData: RecommendationResponse =
+        await recommendationResponse.json();
+
+      setGoodreadsResult(profile);
+
+      setRecommendations(
+        recommendationData,
+      );
+    } catch {
+      setRecommendationError(
+        "Could not load the public recommendation demo.",
+      );
+    } finally {
+      setLoadingDemoRecommendations(
+        false,
+      );
+    }
+  }
+
+  const identifiedBooks =
+    job?.result_json?.books ?? [];
+
+  const ocrResult =
+    job?.result_json?.ocr;
+
+  const shelfImageSource =
+    demoMode
+      ? "/demo-shelf.jpg"
+      : previewUrl;
 
   return (
     <main className="flex min-h-screen justify-center p-8">
       <div className="w-full max-w-4xl py-12">
         <header className="text-center">
-          <h1 className="text-5xl font-bold">BookFiend</h1>
+          <h1 className="text-5xl font-bold">
+            BookFiend
+          </h1>
 
           <p className="mt-4 text-lg">
-            Turn bookshelf photos into a structured library and personalized
-            recommendations.
+            Turn bookshelf photos into a structured library
+            and personalized recommendations.
           </p>
-        </header>
 
-        <section className="mt-10 rounded-xl border p-6">
-          <h2 className="text-xl font-semibold">System Status</h2>
+          {demoMode && (
+            <div className="mx-auto mt-5 max-w-2xl rounded-xl border p-4 text-sm">
+              <strong>
+                Public Demo
+              </strong>
 
-          {healthError && <p className="mt-4">{healthError}</p>}
-
-          {!health && !healthError && (
-            <p className="mt-4">Checking services...</p>
-          )}
-
-          {health && (
-            <div className="mt-4 flex flex-wrap gap-6 text-sm">
-              <span>API: {health.api}</span>
-              <span>PostgreSQL: {health.database}</span>
-              <span>Redis: {health.redis}</span>
+              <p className="mt-1 opacity-70">
+                This recruiter demo uses genuine results previously
+                generated by BookFiend&apos;s real OCR and
+                recommendation pipelines. The complete upload
+                pipeline runs locally with Docker Compose.
+              </p>
             </div>
           )}
-        </section>
+        </header>
+
+        {demoMode ? (
+          <section className="mt-10 rounded-xl border p-6">
+            <h2 className="text-xl font-semibold">
+              Demo Environment
+            </h2>
+
+            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+              <div className="rounded-lg border p-3">
+                <strong>
+                  Frontend
+                </strong>
+
+                <p className="mt-1 opacity-70">
+                  Live public deployment
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-3">
+                <strong>
+                  Scan Result
+                </strong>
+
+                <p className="mt-1 opacity-70">
+                  Precomputed by the real pipeline
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-3">
+                <strong>
+                  Backend
+                </strong>
+
+                <p className="mt-1 opacity-70">
+                  Not required for cached demo
+                </p>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="mt-10 rounded-xl border p-6">
+            <h2 className="text-xl font-semibold">
+              System Status
+            </h2>
+
+            {healthError && (
+              <p className="mt-4">
+                {healthError}
+              </p>
+            )}
+
+            {!health &&
+              !healthError && (
+                <p className="mt-4">
+                  Checking services...
+                </p>
+              )}
+
+            {health && (
+              <div className="mt-4 flex flex-wrap gap-6 text-sm">
+                <span>
+                  API: {health.api}
+                </span>
+
+                <span>
+                  PostgreSQL:{" "}
+                  {health.database}
+                </span>
+
+                <span>
+                  Redis: {health.redis}
+                </span>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="mt-6 rounded-xl border p-6">
-          <h2 className="text-xl font-semibold">Scan a Bookshelf</h2>
+          <h2 className="text-xl font-semibold">
+            {demoMode
+              ? "Try the Sample Bookshelf"
+              : "Scan a Bookshelf"}
+          </h2>
 
           <p className="mt-2 text-sm opacity-70">
-            Upload a clear JPEG, PNG, or WebP bookshelf image.
+            {demoMode
+              ? "Run BookFiend's public demo using a bookshelf previously processed by the complete local OCR pipeline."
+              : "Upload a clear JPEG, PNG, or WebP bookshelf image."}
           </p>
 
-          <input
-            accept="image/jpeg,image/png,image/webp"
-            className="mt-5 block w-full"
-            onChange={handleShelfFileChange}
-            type="file"
-          />
-
-          {previewUrl && (
-            <img
-              alt="Bookshelf preview"
-              className="mt-5 max-h-96 rounded-lg border object-contain"
-              src={previewUrl}
+          {!demoMode && (
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              className="mt-5 block w-full"
+              onChange={
+                handleShelfFileChange
+              }
+              type="file"
             />
           )}
 
-          <button
-            className="mt-5 rounded-lg border px-5 py-2 font-medium disabled:opacity-50"
-            disabled={!selectedFile || creatingJob}
-            onClick={startScan}
-          >
-            {creatingJob ? "Starting scan..." : "Scan Bookshelf"}
-          </button>
+          {shelfImageSource && (
+            <img
+              alt="Bookshelf preview"
+              className="mt-5 max-h-96 rounded-lg border object-contain"
+              src={shelfImageSource}
+            />
+          )}
+
+          {demoMode ? (
+            <button
+              className="mt-5 rounded-lg border px-5 py-2 font-medium disabled:opacity-50"
+              disabled={
+                loadingDemoScan
+              }
+              onClick={
+                loadDemoScan
+              }
+            >
+              {loadingDemoScan
+                ? "Loading BookFiend result..."
+                : "Try Sample Shelf"}
+            </button>
+          ) : (
+            <button
+              className="mt-5 rounded-lg border px-5 py-2 font-medium disabled:opacity-50"
+              disabled={
+                !selectedFile ||
+                creatingJob
+              }
+              onClick={startScan}
+            >
+              {creatingJob
+                ? "Starting scan..."
+                : "Scan Bookshelf"}
+            </button>
+          )}
 
           {jobError && (
-            <p className="mt-4 rounded-lg border p-3">{jobError}</p>
+            <p className="mt-4 rounded-lg border p-3">
+              {jobError}
+            </p>
           )}
 
           {job && (
             <div className="mt-6">
               <div className="flex justify-between gap-4">
                 <p>
-                  <strong>Status:</strong> {formatStatus(job.status)}
+                  <strong>
+                    Status:
+                  </strong>{" "}
+                  {formatStatus(
+                    job.status,
+                  )}
                 </p>
 
-                <p>{job.progress}%</p>
+                <p>
+                  {job.progress}%
+                </p>
               </div>
 
               <div className="mt-2 h-3 overflow-hidden rounded-full border">
                 <div
                   className="h-full bg-white transition-all duration-500"
-                  style={{ width: `${job.progress}%` }}
+                  style={{
+                    width: `${job.progress}%`,
+                  }}
                 />
               </div>
 
-              {job.status === "failed" && (
+              {job.status ===
+                "failed" && (
                 <p className="mt-4 rounded-lg border p-3">
-                  Scan failed: {job.error_message ?? "Unknown error"}
+                  Scan failed:{" "}
+                  {job.error_message ??
+                    "Unknown error"}
                 </p>
               )}
 
-              {job.status === "completed" && (
+              {job.status ===
+                "completed" && (
                 <>
                   <div className="mt-8">
                     <h3 className="text-2xl font-semibold">
@@ -404,53 +727,93 @@ export default function Home() {
                     </h3>
 
                     <p className="mt-2 text-sm opacity-70">
-                      Matched {identifiedBooks.length}{" "}
-                      {identifiedBooks.length === 1 ? "book" : "books"} using
-                      OCR and Open Library metadata.
+                      Matched{" "}
+                      {
+                        identifiedBooks.length
+                      }{" "}
+                      {identifiedBooks.length ===
+                      1
+                        ? "book"
+                        : "books"}{" "}
+                      using OCR and Open
+                      Library metadata.
                     </p>
 
-                    {identifiedBooks.length > 0 ? (
+                    {demoMode && (
+                      <p className="mt-2 text-xs opacity-60">
+                        These results were
+                        exported from a
+                        genuine completed
+                        BookFiend scan job.
+                      </p>
+                    )}
+
+                    {identifiedBooks.length >
+                    0 ? (
                       <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                        {identifiedBooks.map((book) => (
-                          <article
-                            className="rounded-xl border p-5"
-                            key={
-                              book.open_library_key ??
-                              `${book.title}-${book.author}`
-                            }
-                          >
-                            <h4 className="text-lg font-semibold">
-                              {book.title}
-                            </h4>
+                        {identifiedBooks.map(
+                          (book) => (
+                            <article
+                              className="rounded-xl border p-5"
+                              key={
+                                book.open_library_key ??
+                                `${book.title}-${book.author}`
+                              }
+                            >
+                              <h4 className="text-lg font-semibold">
+                                {
+                                  book.title
+                                }
+                              </h4>
 
-                            <p className="mt-1 opacity-80">
-                              {book.author ?? "Unknown author"}
-                            </p>
-
-                            <div className="mt-4 space-y-1 text-sm opacity-70">
-                              <p>
-                                Metadata match:{" "}
-                                {percentage(book.match_score)}
+                              <p className="mt-1 opacity-80">
+                                {book.author ??
+                                  "Unknown author"}
                               </p>
 
-                              <p>
-                                OCR confidence:{" "}
-                                {percentage(book.ocr_confidence)}
-                              </p>
+                              <div className="mt-4 space-y-1 text-sm opacity-70">
+                                <p>
+                                  Metadata
+                                  match:{" "}
+                                  {percentage(
+                                    book.match_score,
+                                  )}
+                                </p>
 
-                              <p>
-                                Author evidence:{" "}
-                                {percentage(book.author_support)}
-                              </p>
+                                <p>
+                                  OCR
+                                  confidence:{" "}
+                                  {percentage(
+                                    book.ocr_confidence,
+                                  )}
+                                </p>
 
-                              {book.isbn && <p>ISBN: {book.isbn}</p>}
-                            </div>
-                          </article>
-                        ))}
+                                <p>
+                                  Author
+                                  evidence:{" "}
+                                  {percentage(
+                                    book.author_support,
+                                  )}
+                                </p>
+
+                                {book.isbn && (
+                                  <p>
+                                    ISBN:{" "}
+                                    {
+                                      book.isbn
+                                    }
+                                  </p>
+                                )}
+                              </div>
+                            </article>
+                          ),
+                        )}
                       </div>
                     ) : (
                       <p className="mt-4 rounded-lg border p-4 opacity-70">
-                        No confident book matches were found for this image.
+                        No confident book
+                        matches were found
+                        for this image.
                       </p>
                     )}
                   </div>
@@ -462,23 +825,41 @@ export default function Home() {
                       </summary>
 
                       <p className="mt-3 text-sm opacity-70">
-                        Detected {ocrResult.text_regions} text regions in{" "}
-                        {ocrResult.elapsed_seconds.toFixed(2)} seconds.
+                        Detected{" "}
+                        {
+                          ocrResult.text_regions
+                        }{" "}
+                        text regions in{" "}
+                        {ocrResult.elapsed_seconds.toFixed(
+                          2,
+                        )}{" "}
+                        seconds.
                       </p>
 
                       <div className="mt-4 space-y-2">
-                        {ocrResult.lines.map((line, index) => (
-                          <div
-                            className="flex items-center justify-between gap-4 rounded-lg border p-3"
-                            key={`${line.text}-${index}`}
-                          >
-                            <span>{line.text}</span>
+                        {ocrResult.lines.map(
+                          (
+                            line,
+                            index,
+                          ) => (
+                            <div
+                              className="flex items-center justify-between gap-4 rounded-lg border p-3"
+                              key={`${line.text}-${index}`}
+                            >
+                              <span>
+                                {
+                                  line.text
+                                }
+                              </span>
 
-                            <span className="shrink-0 text-sm opacity-70">
-                              {percentage(line.confidence)}
-                            </span>
-                          </div>
-                        ))}
+                              <span className="shrink-0 text-sm opacity-70">
+                                {percentage(
+                                  line.confidence,
+                                )}
+                              </span>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </details>
                   )}
@@ -490,30 +871,58 @@ export default function Home() {
 
         <section className="mt-6 rounded-xl border p-6">
           <h2 className="text-xl font-semibold">
-            Personalize with Goodreads
+            {demoMode
+              ? "Try Sample Recommendations"
+              : "Personalize with Goodreads"}
           </h2>
 
           <p className="mt-2 text-sm opacity-70">
-            Import your Goodreads library export to build a preference profile
-            from your ratings and shelves.
+            {demoMode
+              ? "View recommendations generated from the same schema-accurate Goodreads sample profile used to test BookFiend."
+              : "Import your Goodreads library export to build a preference profile from your ratings and shelves."}
           </p>
 
-          <input
-            accept=".csv,text/csv"
-            className="mt-5 block w-full"
-            onChange={handleGoodreadsFileChange}
-            type="file"
-          />
+          {!demoMode && (
+            <input
+              accept=".csv,text/csv"
+              className="mt-5 block w-full"
+              onChange={
+                handleGoodreadsFileChange
+              }
+              type="file"
+            />
+          )}
 
-          <button
-            className="mt-5 rounded-lg border px-5 py-2 font-medium disabled:opacity-50"
-            disabled={!goodreadsFile || importingGoodreads}
-            onClick={importGoodreads}
-          >
-            {importingGoodreads
-              ? "Importing..."
-              : "Import Goodreads & Recommend"}
-          </button>
+          {demoMode ? (
+            <button
+              className="mt-5 rounded-lg border px-5 py-2 font-medium disabled:opacity-50"
+              disabled={
+                loadingDemoRecommendations
+              }
+              onClick={
+                loadDemoRecommendations
+              }
+            >
+              {loadingDemoRecommendations
+                ? "Loading recommendations..."
+                : "Show Sample Recommendations"}
+            </button>
+          ) : (
+            <button
+              className="mt-5 rounded-lg border px-5 py-2 font-medium disabled:opacity-50"
+              disabled={
+                !goodreadsFile ||
+                importingGoodreads
+              }
+              onClick={
+                importGoodreads
+              }
+            >
+              {importingGoodreads
+                ? "Importing..."
+                : "Import Goodreads & Recommend"}
+            </button>
+          )}
 
           {goodreadsError && (
             <p className="mt-4 rounded-lg border p-3">
@@ -530,7 +939,9 @@ export default function Home() {
               <div className="mt-4 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-lg border p-4">
                   <p className="text-2xl font-semibold">
-                    {goodreadsResult.imported_count}
+                    {
+                      goodreadsResult.imported_count
+                    }
                   </p>
 
                   <p className="mt-1 text-sm opacity-70">
@@ -540,7 +951,9 @@ export default function Home() {
 
                 <div className="rounded-lg border p-4">
                   <p className="text-2xl font-semibold">
-                    {goodreadsResult.rated_count}
+                    {
+                      goodreadsResult.rated_count
+                    }
                   </p>
 
                   <p className="mt-1 text-sm opacity-70">
@@ -550,7 +963,9 @@ export default function Home() {
 
                 <div className="rounded-lg border p-4">
                   <p className="text-2xl font-semibold">
-                    {goodreadsResult.shelf_count}
+                    {
+                      goodreadsResult.shelf_count
+                    }
                   </p>
 
                   <p className="mt-1 text-sm opacity-70">
@@ -566,14 +981,16 @@ export default function Home() {
                   </h4>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {goodreadsResult.favorite_authors.map((author) => (
-                      <span
-                        className="rounded-full border px-3 py-1 text-sm"
-                        key={author}
-                      >
-                        {author}
-                      </span>
-                    ))}
+                    {goodreadsResult.favorite_authors.map(
+                      (author) => (
+                        <span
+                          className="rounded-full border px-3 py-1 text-sm"
+                          key={author}
+                        >
+                          {author}
+                        </span>
+                      ),
+                    )}
                   </div>
                 </div>
 
@@ -583,14 +1000,16 @@ export default function Home() {
                   </h4>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {goodreadsResult.favorite_shelves.map((shelf) => (
-                      <span
-                        className="rounded-full border px-3 py-1 text-sm"
-                        key={shelf}
-                      >
-                        {shelf}
-                      </span>
-                    ))}
+                    {goodreadsResult.favorite_shelves.map(
+                      (shelf) => (
+                        <span
+                          className="rounded-full border px-3 py-1 text-sm"
+                          key={shelf}
+                        >
+                          {shelf}
+                        </span>
+                      ),
+                    )}
                   </div>
                 </div>
               </div>
@@ -598,7 +1017,9 @@ export default function Home() {
           )}
 
           {loadingRecommendations && (
-            <p className="mt-6">Ranking recommendations...</p>
+            <p className="mt-6">
+              Ranking recommendations...
+            </p>
           )}
 
           {recommendationError && (
@@ -614,14 +1035,34 @@ export default function Home() {
               </h3>
 
               <p className="mt-2 text-sm opacity-70">
-                Ranked {recommendations.candidate_count} candidate books from a
-                seeded catalog using your {recommendations.profile_book_count}{" "}
+                Evaluated{" "}
+                {
+                  recommendations.candidate_count
+                }{" "}
+                candidate books using{" "}
+                {
+                  recommendations.profile_book_count
+                }{" "}
                 imported Goodreads books.
               </p>
 
+              {demoMode && (
+                <p className="mt-2 text-xs opacity-60">
+                  Recommendation output
+                  was exported from
+                  BookFiend&apos;s real
+                  TF-IDF and
+                  preference-ranking
+                  endpoint.
+                </p>
+              )}
+
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 {recommendations.recommendations.map(
-                  (recommendation, index) => (
+                  (
+                    recommendation,
+                    index,
+                  ) => (
                     <article
                       className="rounded-xl border p-5"
                       key={`${recommendation.title}-${recommendation.author}`}
@@ -629,43 +1070,66 @@ export default function Home() {
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="text-sm opacity-60">
-                            #{index + 1}
+                            #
+                            {
+                              index +
+                              1
+                            }
                           </p>
 
                           <h4 className="mt-1 text-lg font-semibold">
-                            {recommendation.title}
+                            {
+                              recommendation.title
+                            }
                           </h4>
 
                           <p className="mt-1 opacity-80">
-                            {recommendation.author}
+                            {
+                              recommendation.author
+                            }
                           </p>
                         </div>
 
                         <span className="shrink-0 rounded-full border px-3 py-1 text-sm">
-                          {percentage(recommendation.score)}
+                          {percentage(
+                            recommendation.score,
+                          )}
                         </span>
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {recommendation.genres.map((genre) => (
-                          <span
-                            className="rounded-full border px-2 py-1 text-xs opacity-80"
-                            key={genre}
-                          >
-                            {genre}
-                          </span>
-                        ))}
+                        {recommendation.genres.map(
+                          (genre) => (
+                            <span
+                              className="rounded-full border px-2 py-1 text-xs opacity-80"
+                              key={genre}
+                            >
+                              {genre}
+                            </span>
+                          ),
+                        )}
                       </div>
 
                       <div className="mt-4 space-y-2 text-sm opacity-75">
-                        {recommendation.reasons.map((reason) => (
-                          <p key={reason}>{reason}</p>
-                        ))}
+                        {recommendation.reasons.map(
+                          (reason) => (
+                            <p
+                              key={
+                                reason
+                              }
+                            >
+                              {reason}
+                            </p>
+                          ),
+                        )}
                       </div>
 
                       <p className="mt-4 text-xs opacity-50">
-                        TF-IDF similarity:{" "}
-                        {percentage(recommendation.similarity_score)}
+                        TF-IDF
+                        similarity:{" "}
+                        {percentage(
+                          recommendation.similarity_score,
+                        )}
                       </p>
                     </article>
                   ),
@@ -674,6 +1138,11 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        <footer className="mt-8 text-center text-xs opacity-50">
+          BookFiend · OCR-powered bookshelf recognition and
+          content-based book recommendations
+        </footer>
       </div>
     </main>
   );

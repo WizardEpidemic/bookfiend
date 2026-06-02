@@ -1,0 +1,22 @@
+{
+  "imported_count": 8,
+  "rated_count": 8,
+  "shelf_count": 12,
+  "favorite_authors": [
+    "Stephen King",
+    "Pierce Brown",
+    "Suzanne Collins",
+    "Samantha Shannon",
+    "R. F. Kuang"
+  ],
+  "favorite_shelves": [
+    "fantasy",
+    "dystopian",
+    "science-fiction",
+    "horror",
+    "thriller",
+    "young-adult",
+    "high-fantasy",
+    "dark-fantasy"
+  ]
+}

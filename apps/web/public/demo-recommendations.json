@@ -1,0 +1,120 @@
+﻿{
+    "profile_book_count":  8,
+    "candidate_count":  20,
+    "recommendations":  [
+                            {
+                                "title":  "The Fifth Season",
+                                "author":  "N. K. Jemisin",
+                                "genres":  [
+                                               "fantasy",
+                                               "science-fiction",
+                                               "dystopian"
+                                           ],
+                                "score":  0.3883,
+                                "similarity_score":  0.3178,
+                                "reasons":  [
+                                                "Matches preferred shelves: fantasy, science-fiction, dystopian"
+                                            ]
+                            },
+                            {
+                                "title":  "Legend",
+                                "author":  "Marie Lu",
+                                "genres":  [
+                                               "dystopian",
+                                               "young-adult",
+                                               "science-fiction"
+                                           ],
+                                "score":  0.3524,
+                                "similarity_score":  0.2699,
+                                "reasons":  [
+                                                "Matches preferred shelves: dystopian, young-adult, science-fiction"
+                                            ]
+                            },
+                            {
+                                "title":  "Scythe",
+                                "author":  "Neal Shusterman",
+                                "genres":  [
+                                               "dystopian",
+                                               "young-adult",
+                                               "science-fiction"
+                                           ],
+                                "score":  0.352,
+                                "similarity_score":  0.2693,
+                                "reasons":  [
+                                                "Matches preferred shelves: dystopian, young-adult, science-fiction"
+                                            ]
+                            },
+                            {
+                                "title":  "Misery",
+                                "author":  "Stephen King",
+                                "genres":  [
+                                               "horror",
+                                               "thriller",
+                                               "psychological"
+                                           ],
+                                "score":  0.3461,
+                                "similarity_score":  0.1682,
+                                "reasons":  [
+                                                "Matches preferred shelves: horror, thriller",
+                                                "You rated another book by Stephen King highly."
+                                            ]
+                            },
+                            {
+                                "title":  "Babel",
+                                "author":  "R. F. Kuang",
+                                "genres":  [
+                                               "fantasy",
+                                               "dark-academia",
+                                               "historical-fantasy"
+                                           ],
+                                "score":  0.3151,
+                                "similarity_score":  0.1667,
+                                "reasons":  [
+                                                "Matches preferred shelves: fantasy",
+                                                "You rated another book by R. F. Kuang highly."
+                                            ]
+                            },
+                            {
+                                "title":  "The Blade Itself",
+                                "author":  "Joe Abercrombie",
+                                "genres":  [
+                                               "fantasy",
+                                               "dark-fantasy",
+                                               "grimdark"
+                                           ],
+                                "score":  0.2748,
+                                "similarity_score":  0.2065,
+                                "reasons":  [
+                                                "Matches preferred shelves: fantasy, dark-fantasy"
+                                            ]
+                            },
+                            {
+                                "title":  "The Will of the Many",
+                                "author":  "James Islington",
+                                "genres":  [
+                                               "fantasy",
+                                               "dark-academia",
+                                               "dystopian"
+                                           ],
+                                "score":  0.254,
+                                "similarity_score":  0.1387,
+                                "reasons":  [
+                                                "Matches preferred shelves: fantasy, dystopian"
+                                            ]
+                            },
+                            {
+                                "title":  "Mistborn: The Final Empire",
+                                "author":  "Brandon Sanderson",
+                                "genres":  [
+                                               "fantasy",
+                                               "high-fantasy",
+                                               "adventure"
+                                           ],
+                                "score":  0.2529,
+                                "similarity_score":  0.1772,
+                                "reasons":  [
+                                                "Matches preferred shelves: fantasy, high-fantasy"
+                                            ]
+                            }
+                        ]
+}

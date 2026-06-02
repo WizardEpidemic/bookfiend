@@ -1,1 +1,595 @@
-# bookfiend
+<!-- Overview, architecture, setup, and technical documentation for the BookFiend application. -->
+
+# BookFiend
+
+**Bookshelf Photo → Structured Library → Personalized Recommendations**
+
+BookFiend is a full-stack application that turns bookshelf photos into structured book data and generates personalized recommendations from Goodreads reading history.
+
+A user uploads a bookshelf image, BookFiend processes it asynchronously through an OCR pipeline, groups and cleans the detected text, matches likely titles against Open Library metadata, and returns structured book results.
+
+Users can also import a Goodreads CSV to build a reading profile and receive explainable content-based recommendations.
+
+---
+
+## Features
+
+### Bookshelf Scanning
+
+- Upload JPEG, PNG, and WebP bookshelf images
+- Validate image format, size, and dimensions
+- Store scan jobs in PostgreSQL
+- Process scans asynchronously with Redis and Celery
+- Track job status and progress from the frontend
+- Preprocess images with OpenCV
+- Extract text using RapidOCR
+- Run PaddleOCR-derived models through ONNX Runtime
+- Store OCR text, confidence scores, and bounding boxes
+- Group nearby OCR regions into book-title candidates
+- Normalize noisy OCR output
+- Match candidates against Open Library
+- Use fuzzy title matching and nearby author evidence
+- Cache metadata responses in Redis
+- Display identified books and raw OCR results
+
+### Goodreads & Recommendations
+
+- Import Goodreads CSV exports
+- Normalize Goodreads ISBN formatting
+- Store ratings, authors, and shelves
+- Build a reading preference profile
+- Identify favorite authors and categories
+- Rank books from a separate candidate catalog
+- Use TF-IDF and cosine similarity
+- Add genre and author preference signals
+- Exclude books already present in the reading history
+- Return human-readable recommendation reasons
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TD
+    Browser["Next.js / React / TypeScript"]
+
+    API["FastAPI"]
+    PostgreSQL[("PostgreSQL")]
+    Redis[("Redis")]
+    Worker["Celery Worker"]
+    Storage[("Image Storage")]
+
+    OpenCV["OpenCV"]
+    OCR["RapidOCR"]
+    ONNX["ONNX Runtime"]
+    Normalize["Grouping & Normalization"]
+    Matcher["Metadata Matching"]
+    OpenLibrary["Open Library"]
+
+    Goodreads["Goodreads CSV"]
+    Profile["Reading Profile"]
+    Catalog["Book Catalog"]
+    Recommender["TF-IDF + Cosine Similarity"]
+
+    Browser -->|"REST / JSON"| API
+
+    API --> PostgreSQL
+    API --> Redis
+    API --> Storage
+
+    Redis -->|"Celery task"| Worker
+    Worker --> PostgreSQL
+    Worker --> Storage
+
+    Worker --> OpenCV
+    OpenCV --> OCR
+    OCR --> ONNX
+    ONNX --> Normalize
+    Normalize --> Matcher
+
+    Matcher --> Redis
+    Matcher -->|"cache miss"| OpenLibrary
+
+    Goodreads --> API
+    API --> Profile
+    PostgreSQL --> Profile
+
+    Profile --> Recommender
+    Catalog --> Recommender
+    Recommender --> API
+
+    API --> Browser
+```
+
+---
+
+## Service Responsibilities
+
+| Service | Responsibility |
+| --- | --- |
+| **Next.js** | Image upload, scan progress, book results, Goodreads import, recommendation UI |
+| **FastAPI** | REST API, validation, job creation, persistence, Goodreads parsing, recommendations |
+| **PostgreSQL** | Durable scan jobs, results, and imported reading data |
+| **Redis** | Celery message broker and Open Library metadata cache |
+| **Celery** | Runs long-running bookshelf scans outside the HTTP request path |
+| **OpenCV** | Image loading, resizing, contrast enhancement, and image preprocessing |
+| **RapidOCR** | Text detection and recognition |
+| **ONNX Runtime** | Executes the OCR models on CPU |
+| **Open Library** | Resolves noisy OCR candidates into canonical book metadata |
+
+---
+
+## Bookshelf Scan Flow
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    participant Redis
+    participant Worker as Celery
+    participant Books as Open Library
+
+    Browser->>API: POST /jobs + bookshelf image
+    API->>API: Validate and store image
+    API->>DB: Create queued scan job
+    API->>Redis: Enqueue scan task
+    API-->>Browser: Return job ID
+
+    Redis->>Worker: Deliver task
+    Worker->>DB: Mark processing
+
+    Worker->>Worker: OpenCV preprocessing
+    Worker->>Worker: RapidOCR / ONNX inference
+    Worker->>Worker: Group and normalize text
+
+    Worker->>Redis: Check metadata cache
+
+    alt Cache miss
+        Worker->>Books: Search for candidate books
+        Books-->>Worker: Metadata results
+        Worker->>Redis: Cache response
+    else Cache hit
+        Redis-->>Worker: Cached metadata
+    end
+
+    Worker->>DB: Save identified books
+    Worker->>DB: Mark completed
+
+    Browser->>API: GET /jobs/{job_id}
+    API-->>Browser: Completed scan results
+```
+
+The API does not wait for OCR to finish inside the upload request. Long-running work is handled by the Celery worker while the frontend polls the persisted job state.
+
+---
+
+## OCR & Metadata Pipeline
+
+```text
+Bookshelf Image
+      ↓
+OpenCV Preprocessing
+      ↓
+RapidOCR
+      ↓
+PaddleOCR-Derived ONNX Models
+      ↓
+ONNX Runtime
+      ↓
+Text + Confidence + Bounding Boxes
+      ↓
+Spatial Grouping
+      ↓
+Text Normalization
+      ↓
+Open Library Search
+      ↓
+Fuzzy Matching + Author Evidence
+      ↓
+Structured Books
+```
+
+OCR output from a bookshelf can be fragmented or imperfect.
+
+For example:
+
+```text
+UNDER THE
+WHISPERING DOOR
+T J KLUNE
+```
+
+BookFiend uses bounding-box geometry and nearby text to create larger candidates before metadata matching.
+
+The matching layer then combines:
+
+- normalized text
+- OCR confidence
+- title similarity
+- author evidence
+- metadata search results
+
+Uncertain candidates can remain unmatched rather than being forced into a book result.
+
+---
+
+## Recommendation System
+
+Goodreads data provides the **preference profile**, while a separate catalog provides books that can be recommended.
+
+```mermaid
+flowchart LR
+    Goodreads["Goodreads CSV"]
+    Profile["Reading Profile"]
+    Catalog["Candidate Catalog"]
+    TFIDF["TF-IDF"]
+    Similarity["Cosine Similarity"]
+    Signals["Genre + Author Signals"]
+    Ranking["Final Ranking"]
+    Results["Recommendations"]
+
+    Goodreads --> Profile
+    Profile --> TFIDF
+    Catalog --> TFIDF
+
+    TFIDF --> Similarity
+    Similarity --> Ranking
+
+    Profile --> Signals
+    Signals --> Ranking
+
+    Ranking --> Results
+```
+
+The system considers:
+
+- highly rated books
+- favorite authors
+- favorite Goodreads shelves
+- candidate book genres
+- candidate descriptions
+- TF-IDF content similarity
+- author preference
+- genre preference
+
+Each result includes a reason such as:
+
+```text
+Matches preferred shelves: fantasy, science-fiction, dystopian
+```
+
+or:
+
+```text
+You rated another book by Stephen King highly.
+```
+
+Recommendation scores are relative ranking scores, not probabilities that a user will like a book.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | Next.js, React, TypeScript, Tailwind CSS |
+| Backend | Python 3.12, FastAPI, Uvicorn, Pydantic |
+| Database | PostgreSQL, SQLAlchemy, psycopg, Alembic |
+| Queue | Redis, Celery |
+| Image Processing | OpenCV |
+| OCR | RapidOCR, PaddleOCR-derived models |
+| Model Runtime | ONNX Runtime |
+| Matching | RapidFuzz |
+| Book Metadata | Open Library |
+| Recommendations | scikit-learn, TF-IDF, cosine similarity |
+| Infrastructure | Docker, Docker Compose |
+
+---
+
+## Redis
+
+Redis currently serves two separate purposes.
+
+### Background Job Queue
+
+```text
+FastAPI
+   ↓
+Redis
+   ↓
+Celery Worker
+```
+
+FastAPI places scan jobs onto the queue and immediately returns control to the client.
+
+### Metadata Cache
+
+```text
+Book Query
+    ↓
+Redis
+ ┌──┴──┐
+Hit   Miss
+ ↓      ↓
+Cache  Open Library
+        ↓
+     Cache Result
+```
+
+Repeated metadata requests can reuse cached Open Library responses instead of making the same external request again.
+
+---
+
+## API Overview
+
+### `GET /health`
+
+Checks connectivity to the API, PostgreSQL, and Redis.
+
+```json
+{
+  "api": "ok",
+  "database": "ok",
+  "redis": "ok"
+}
+```
+
+### `POST /jobs`
+
+Accepts a bookshelf image and creates an asynchronous scan job.
+
+### `GET /jobs/{job_id}`
+
+Returns job status, progress, and scan results.
+
+Possible lifecycle:
+
+```text
+queued
+→ processing
+→ preprocessing
+→ ocr
+→ normalizing
+→ matching_metadata
+→ completed
+```
+
+### `POST /goodreads/import`
+
+Imports a Goodreads CSV and builds a reading preference profile.
+
+### `GET /recommendations`
+
+Returns ranked recommendations based on the imported reading profile.
+
+Interactive API documentation is available locally through FastAPI Swagger UI:
+
+```text
+http://localhost:8000/docs
+```
+
+---
+
+## Repository Structure
+
+```text
+bookfiend/
+│
+├── README.md
+├── docker-compose.yml
+├── .dockerignore
+│
+├── apps/
+│   ├── web/
+│   │   ├── public/
+│   │   └── src/
+│   │       └── app/
+│   │
+│   └── api/
+│       ├── alembic/
+│       ├── app/
+│       │   ├── routes/
+│       │   ├── services/
+│       │   ├── tasks/
+│       │   └── models/
+│       └── requirements.txt
+│
+├── ml/
+│   ├── preprocessing.py
+│   ├── ocr.py
+│   ├── normalize.py
+│   └── match_books.py
+│
+├── data/
+│   └── sample_goodreads.csv
+│
+├── eval/
+│
+└── infra/
+    ├── Dockerfile.api
+    └── Dockerfile.web
+```
+
+---
+
+## Local Development
+
+### Requirements
+
+Install:
+
+- Git
+- Docker Desktop
+- Docker Compose
+
+Docker handles the application services and dependencies.
+
+### Clone the repository
+
+```bash
+git clone https://github.com/WizardEpidemic/bookfiend.git
+cd bookfiend
+```
+
+### Start BookFiend
+
+```bash
+docker compose up -d --build
+```
+
+Check the running services:
+
+```bash
+docker compose ps
+```
+
+The stack should include:
+
+```text
+bookfiend-web
+bookfiend-api
+bookfiend-worker
+bookfiend-postgres
+bookfiend-redis
+```
+
+### Open the application
+
+```text
+Frontend
+http://localhost:3000
+
+FastAPI Documentation
+http://localhost:8000/docs
+
+API Health
+http://localhost:8000/health
+```
+
+### Stop the application
+
+```bash
+docker compose down
+```
+
+---
+
+## Example Scan Results
+
+BookFiend has successfully resolved books from bookshelf images including:
+
+- **Morning Star** — Pierce Brown
+- **Red Rising** — Pierce Brown
+- **Golden Son** — Pierce Brown
+- **Girl, Serpent, Thorn** — Melissa Bashardoust
+- **The World as I See It** — Albert Einstein
+- **It Starts with Us** — Colleen Hoover
+- **It Ends With Us** — Colleen Hoover
+- **Under the Whispering Door** — T. J. Klune
+
+These are sample results from a tested bookshelf image rather than formal accuracy measurements.
+
+---
+
+## Engineering Decisions
+
+### Why background jobs?
+
+OCR, normalization, and metadata matching can take several seconds.
+
+Running the complete pipeline inside an HTTP request would keep the API occupied and make progress reporting and retries harder.
+
+Redis and Celery separate request handling from compute-heavy processing.
+
+### Why PostgreSQL and Redis?
+
+PostgreSQL stores durable application state.
+
+Redis handles temporary coordination and cached data.
+
+```text
+PostgreSQL = durable state
+Redis      = fast temporary state
+```
+
+### Why ONNX Runtime?
+
+BookFiend uses pretrained PaddleOCR-derived models through RapidOCR.
+
+ONNX Runtime executes those models without requiring the full training framework inside the worker.
+
+### Why deterministic OCR cleanup?
+
+BookFiend currently uses text cleaning, geometry, fuzzy matching, OCR confidence, and metadata evidence instead of relying on an LLM to repair OCR results.
+
+This keeps the pipeline reproducible and easier to inspect.
+
+### Why a separate recommendation catalog?
+
+Goodreads tells BookFiend what a reader already likes.
+
+A separate catalog provides books the system can actually recommend.
+
+Keeping those roles separate prevents the recommendation system from simply returning books already present in the imported library.
+
+---
+
+## Roadmap
+
+Current development priorities include:
+
+- automated backend and frontend tests
+- labeled OCR evaluation data
+- book-identification accuracy metrics
+- rate limiting
+- bounded retry and backoff behavior
+- structured processing logs
+- GitHub Actions CI
+- public web deployment
+- additional bookshelf test cases
+- expanded recommendation catalog
+
+Longer-term possibilities include:
+
+- persistent scan history
+- object storage
+- additional metadata providers
+- improved spine segmentation
+- user correction tools
+- larger recommendation datasets
+- embedding-based recommendation experiments
+
+---
+
+## Project Status
+
+The core application currently supports:
+
+```text
+Bookshelf Photo
+      ↓
+Asynchronous Scan Job
+      ↓
+OpenCV + OCR
+      ↓
+Normalization
+      ↓
+Metadata Matching
+      ↓
+Structured Books
+```
+
+and:
+
+```text
+Goodreads CSV
+      ↓
+Reading Profile
+      ↓
+TF-IDF + Preference Signals
+      ↓
+Ranked Recommendations
+```
+
+The remaining work is focused primarily on testing, evaluation, reliability hardening, CI, and deployment.

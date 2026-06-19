@@ -1,13 +1,22 @@
-# Implements image-backed scan-job creation, queuing, and retrieval endpoints.
+# Implements rate-limited image-backed scan-job creation, queuing, and retrieval endpoints.
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.scan_job import ScanJob
 from app.schemas.job import ScanJobResponse
+from app.services.rate_limit import enforce_scan_rate_limit
 from app.services.storage import store_uploaded_image
 from app.tasks.process_scan import process_scan
 
@@ -22,11 +31,22 @@ router = APIRouter(
     "",
     response_model=ScanJobResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        429: {
+            "description": "Scan request rate limit exceeded.",
+        },
+        503: {
+            "description": "Rate limiting service unavailable.",
+        },
+    },
 )
 async def create_job(
+    request: Request,
     image: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> ScanJob:
+    enforce_scan_rate_limit(request)
+
     image_path, image_hash = await store_uploaded_image(image)
 
     job = ScanJob(

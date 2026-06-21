@@ -1,0 +1,83 @@
+{
+  "name": "demo_shelf",
+  "image_path": "apps/web/public/demo-shelf.jpg",
+  "fixture_result_path": "apps/web/public/demo-result.json",
+  "ocr_regions": [
+    "The World As I See It",
+    "ALBERT EINSTEIN",
+    "GOLDEN SON",
+    "RED RISING",
+    "MORNING STAR",
+    "TJ KLUNE",
+    "WHISPERING DOOR",
+    "UNDER THE",
+    "PIERCE",
+    "PIERCE",
+    "PIERCE",
+    "BROWN",
+    "BROWN",
+    "BROWN",
+    "Girl, Serpent, Thorn",
+    "IT ENDS WITH US COLLEEN HOOVER",
+    "IT STARTS WITH US COLLEEN HOOVER",
+    "COLLEEN HOOVER"
+  ],
+  "books": [
+    {
+      "title": "Morning Star",
+      "author": "Pierce Brown",
+      "open_library_key": "/works/OL19650409W",
+      "candidate_text": "MORNING STAR",
+      "query": "MORNING STAR"
+    },
+    {
+      "title": "Red Rising",
+      "author": "Pierce Brown",
+      "open_library_key": "/works/OL17076473W",
+      "candidate_text": "RED RISING",
+      "query": "RED RISING"
+    },
+    {
+      "title": "Girl, Serpent, Thorn",
+      "author": "Melissa Bashardoust",
+      "open_library_key": "/works/OL20885969W",
+      "candidate_text": "Girl, Serpent, Thorn",
+      "query": "Girl, Serpent, Thorn"
+    },
+    {
+      "title": "The World as I See It",
+      "author": "Albert Einstein",
+      "open_library_key": "/works/OL45327108W",
+      "candidate_text": "The World As I See It",
+      "query": "The World As I See It"
+    },
+    {
+      "title": "It Starts with Us",
+      "author": "Colleen Hoover",
+      "open_library_key": "/works/OL27733867W",
+      "candidate_text": "IT STARTS WITH US COLLEEN HOOVER",
+      "query": "IT STARTS WITH US"
+    },
+    {
+      "title": "It Ends With Us",
+      "author": "Colleen Hoover",
+      "open_library_key": "/works/OL18020194W",
+      "candidate_text": "IT ENDS WITH US COLLEEN HOOVER",
+      "query": "IT ENDS WITH US"
+    },
+    {
+      "title": "Golden Son",
+      "author": "Pierce Brown",
+      "open_library_key": "/works/OL19340986W",
+      "candidate_text": "GOLDEN SON",
+      "query": "GOLDEN SON"
+    },
+    {
+      "title": "Under the Whispering Door",
+      "author": "T. J. Klune",
+      "open_library_key": "/works/OL20862021W",
+      "candidate_text": "UNDER THE WHISPERING DOOR",
+      "query": "UNDER THE WHISPERING DOOR"
+    }
+  ]
+}

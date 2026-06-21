@@ -1,0 +1,7 @@
+{
+  "ocr_cer": 0.0132,
+  "book_top_1_accuracy": 1.0,
+  "book_top_3_accuracy": 1.0,
+  "book_top_5_accuracy": 1.0,
+  "end_to_end_identification_rate": 1.0
+}

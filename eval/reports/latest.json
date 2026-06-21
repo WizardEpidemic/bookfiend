@@ -1,0 +1,567 @@
+{
+  "dataset": "demo_shelf",
+  "source": "stored_genuine_pipeline_fixture",
+  "ocr": {
+    "labeled_regions": 18,
+    "observed_regions": 79,
+    "character_edits": 3,
+    "ground_truth_characters": 227,
+    "cer": 0.0132,
+    "cer_percent": 1.32,
+    "wer": 0.093,
+    "wer_percent": 9.3,
+    "alignments": [
+      {
+        "expected": "The World As I See It",
+        "observed": "The World As I See It",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "ALBERT EINSTEIN",
+        "observed": "ALBERT EIRSTEIN",
+        "character_edits": 1,
+        "word_edits": 1
+      },
+      {
+        "expected": "GOLDEN SON",
+        "observed": "GOLDEN SON",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "RED RISING",
+        "observed": "RED RISING",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "MORNING STAR",
+        "observed": "MORNING STAR",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "TJ KLUNE",
+        "observed": "TJKLUNE",
+        "character_edits": 1,
+        "word_edits": 2
+      },
+      {
+        "expected": "WHISPERING DOOR",
+        "observed": "WHISPERING DOOR",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "UNDER THE",
+        "observed": "UNDER THE",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "PIERCE",
+        "observed": "PIERCE",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "PIERCE",
+        "observed": "PIERCE",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "PIERCE",
+        "observed": "PIERCE",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "BROWN",
+        "observed": "BROWN",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "BROWN",
+        "observed": "BROWN",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "BROWN",
+        "observed": "BROWN",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "Girl, Serpent, Thorn",
+        "observed": "Girl, Serpent, Thorn",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "IT ENDS WITH US COLLEEN HOOVER",
+        "observed": "IT ENDS WITH US COLLEEN HOOVER",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "IT STARTS WITH US COLLEEN HOOVER",
+        "observed": "IT STARTS WITH US COLLEEN HOOVER ",
+        "character_edits": 0,
+        "word_edits": 0
+      },
+      {
+        "expected": "COLLEEN HOOVER",
+        "observed": "COLLEEN HOAVER",
+        "character_edits": 1,
+        "word_edits": 1
+      }
+    ]
+  },
+  "books": {
+    "labeled_books": 8,
+    "identified_books": 8,
+    "end_to_end_identification_rate": 1.0,
+    "top_1_accuracy": 1.0,
+    "top_3_accuracy": 1.0,
+    "top_5_accuracy": 1.0,
+    "rankings": [
+      {
+        "title": "Morning Star",
+        "author": "Pierce Brown",
+        "expected_key": "/works/OL19650409W",
+        "query": "MORNING STAR",
+        "candidate_text": "MORNING STAR",
+        "rank": 1,
+        "cache_hit": true,
+        "top_candidates": [
+          {
+            "key": "/works/OL19650409W",
+            "title": "Morning Star",
+            "authors": [
+              "Pierce Brown"
+            ],
+            "title_score": 100.0,
+            "author_support": 100.0,
+            "ranking_score": 115.0
+          },
+          {
+            "key": "/works/OL39123635W",
+            "title": "Morning Star",
+            "authors": [
+              "Pierce Brown"
+            ],
+            "title_score": 100.0,
+            "author_support": 100.0,
+            "ranking_score": 115.0
+          },
+          {
+            "key": "/works/OL25282920W",
+            "title": "Morning Star",
+            "authors": [
+              "Karl Ove Knausg\u00e5rd",
+              "Martin Aitken"
+            ],
+            "title_score": 100.0,
+            "author_support": 65.2381,
+            "ranking_score": 109.7857
+          },
+          {
+            "key": "/works/OL17506W",
+            "title": "Morning Star",
+            "authors": [
+              "H. Rider Haggard"
+            ],
+            "title_score": 100.0,
+            "author_support": 55.0,
+            "ranking_score": 108.25
+          },
+          {
+            "key": "/works/OL16161W",
+            "title": "Morning Star",
+            "authors": [
+              "Kerry Newcomb"
+            ],
+            "title_score": 100.0,
+            "author_support": 50.3497,
+            "ranking_score": 107.5524
+          }
+        ]
+      },
+      {
+        "title": "Red Rising",
+        "author": "Pierce Brown",
+        "expected_key": "/works/OL17076473W",
+        "query": "RED RISING",
+        "candidate_text": "RED RISING",
+        "rank": 1,
+        "cache_hit": true,
+        "top_candidates": [
+          {
+            "key": "/works/OL17076473W",
+            "title": "Red Rising",
+            "authors": [
+              "Pierce Brown"
+            ],
+            "title_score": 100.0,
+            "author_support": 100.0,
+            "ranking_score": 115.0
+          },
+          {
+            "key": "/works/OL26627585W",
+            "title": "Red Rising",
+            "authors": [
+              "Renee Joiner",
+              "Pierce Brown"
+            ],
+            "title_score": 100.0,
+            "author_support": 100.0,
+            "ranking_score": 115.0
+          },
+          {
+            "key": "/works/OL159642W",
+            "title": "Red Storm Rising",
+            "authors": [
+              "Tom Clancy",
+              "T CLANCY"
+            ],
+            "title_score": 28.9231,
+            "author_support": 66.6667,
+            "ranking_score": 38.9231
+          },
+          {
+            "key": "/works/OL37791401W",
+            "title": "Red Storm Rising",
+            "authors": [
+              "Tom Clancy"
+            ],
+            "title_score": 28.9231,
+            "author_support": 58.3333,
+            "ranking_score": 37.6731
+          },
+          {
+            "key": "/works/OL19342757W",
+            "title": "Red Moon Rising",
+            "authors": [
+              "Erin Hunter"
+            ],
+            "title_score": 24.0,
+            "author_support": 69.697,
+            "ranking_score": 34.4545
+          }
+        ]
+      },
+      {
+        "title": "Girl, Serpent, Thorn",
+        "author": "Melissa Bashardoust",
+        "expected_key": "/works/OL20885969W",
+        "query": "Girl, Serpent, Thorn",
+        "candidate_text": "Girl, Serpent, Thorn",
+        "rank": 1,
+        "cache_hit": true,
+        "top_candidates": [
+          {
+            "key": "/works/OL20885969W",
+            "title": "Girl, Serpent, Thorn",
+            "authors": [
+              "Melissa Bashardoust"
+            ],
+            "title_score": 100.0,
+            "author_support": 70.1961,
+            "ranking_score": 110.5294
+          }
+        ]
+      },
+      {
+        "title": "The World as I See It",
+        "author": "Albert Einstein",
+        "expected_key": "/works/OL45327108W",
+        "query": "The World As I See It",
+        "candidate_text": "The World As I See It",
+        "rank": 1,
+        "cache_hit": true,
+        "top_candidates": [
+          {
+            "key": "/works/OL45327108W",
+            "title": "The World as I See It",
+            "authors": [
+              "Albert Einstein"
+            ],
+            "title_score": 100.0,
+            "author_support": 93.75,
+            "ranking_score": 114.0625
+          },
+          {
+            "key": "/works/OL45425212W",
+            "title": "The World as I See It",
+            "authors": [
+              "Albert Einstein"
+            ],
+            "title_score": 100.0,
+            "author_support": 93.75,
+            "ranking_score": 114.0625
+          },
+          {
+            "key": "/works/OL43069510W",
+            "title": "the world as i see it",
+            "authors": [
+              "albert einstein "
+            ],
+            "title_score": 100.0,
+            "author_support": 93.75,
+            "ranking_score": 114.0625
+          },
+          {
+            "key": "/works/OL43331667W",
+            "title": "The World As I See It",
+            "authors": [
+              "Albert Harris"
+            ],
+            "title_score": 100.0,
+            "author_support": 83.3333,
+            "ranking_score": 112.5
+          },
+          {
+            "key": "/works/OL25069412W",
+            "title": "The world as I see it!",
+            "authors": [
+              "Ronald Wicker"
+            ],
+            "title_score": 100.0,
+            "author_support": 54.5455,
+            "ranking_score": 108.1818
+          }
+        ]
+      },
+      {
+        "title": "It Starts with Us",
+        "author": "Colleen Hoover",
+        "expected_key": "/works/OL27733867W",
+        "query": "IT STARTS WITH US",
+        "candidate_text": "IT STARTS WITH US COLLEEN HOOVER",
+        "rank": 1,
+        "cache_hit": true,
+        "top_candidates": [
+          {
+            "key": "/works/OL27733867W",
+            "title": "It Starts with Us",
+            "authors": [
+              "Colleen Hoover"
+            ],
+            "title_score": 100.0,
+            "author_support": 100.0,
+            "ranking_score": 115.0
+          },
+          {
+            "key": "/works/OL45895643W",
+            "title": "it starts with us",
+            "authors": [
+              "Collen Hoover"
+            ],
+            "title_score": 100.0,
+            "author_support": 96.1538,
+            "ranking_score": 114.4231
+          },
+          {
+            "key": "/works/OL45895644W",
+            "title": "it starts with us",
+            "authors": [
+              "Collen Hoover"
+            ],
+            "title_score": 100.0,
+            "author_support": 96.1538,
+            "ranking_score": 114.4231
+          },
+          {
+            "key": "/works/OL45587568W",
+            "title": "It Starts with Us",
+            "authors": [],
+            "title_score": 100.0,
+            "author_support": 0.0,
+            "ranking_score": 100.0
+          },
+          {
+            "key": "/works/OL27848692W",
+            "title": "It Ends with Us / It Starts with Us",
+            "authors": [
+              "Colleen Hoover"
+            ],
+            "title_score": 30.2143,
+            "author_support": 100.0,
+            "ranking_score": 45.2143
+          }
+        ]
+      },
+      {
+        "title": "It Ends With Us",
+        "author": "Colleen Hoover",
+        "expected_key": "/works/OL18020194W",
+        "query": "IT ENDS WITH US",
+        "candidate_text": "IT ENDS WITH US COLLEEN HOOVER",
+        "rank": 1,
+        "cache_hit": true,
+        "top_candidates": [
+          {
+            "key": "/works/OL18020194W",
+            "title": "It Ends With Us",
+            "authors": [
+              "Colleen Hoover"
+            ],
+            "title_score": 100.0,
+            "author_support": 100.0,
+            "ranking_score": 115.0
+          },
+          {
+            "key": "/works/OL28877143W",
+            "title": "SUMMARY of IT ENDS with US by Colleen Hoover",
+            "authors": [
+              "James Gerald"
+            ],
+            "title_score": 47.0,
+            "author_support": 55.0,
+            "ranking_score": 55.25
+          },
+          {
+            "key": "/works/OL28735840W",
+            "title": "ANALYSIS and SUMMARY of IT ENDS with US. a Novel Be Colleen Hoover",
+            "authors": [
+              "Katherine Smith"
+            ],
+            "title_score": 35.5676,
+            "author_support": 61.9048,
+            "ranking_score": 44.8533
+          },
+          {
+            "key": "/works/OL19638101W",
+            "title": "It Will End with Us",
+            "authors": [
+              "Sam Savage"
+            ],
+            "title_score": 35.2941,
+            "author_support": 58.8235,
+            "ranking_score": 44.1176
+          },
+          {
+            "key": "/works/OL31054164W",
+            "title": "It Ends with Us Love",
+            "authors": [
+              "James Beans"
+            ],
+            "title_score": 34.2857,
+            "author_support": 58.3333,
+            "ranking_score": 43.0357
+          }
+        ]
+      },
+      {
+        "title": "Golden Son",
+        "author": "Pierce Brown",
+        "expected_key": "/works/OL19340986W",
+        "query": "GOLDEN SON",
+        "candidate_text": "GOLDEN SON",
+        "rank": 1,
+        "cache_hit": true,
+        "top_candidates": [
+          {
+            "key": "/works/OL19340986W",
+            "title": "Golden Son",
+            "authors": [
+              "Pierce Brown"
+            ],
+            "title_score": 100.0,
+            "author_support": 100.0,
+            "ranking_score": 115.0
+          },
+          {
+            "key": "/works/OL29643609W",
+            "title": "Golden Son",
+            "authors": [
+              "Scott Ginsburg"
+            ],
+            "title_score": 100.0,
+            "author_support": 55.0,
+            "ranking_score": 108.25
+          },
+          {
+            "key": "/works/OL3261999W",
+            "title": "Native Sons of the Golden West",
+            "authors": [
+              "Richard S. Kimball",
+              "Barney Noel"
+            ],
+            "title_score": 18.8,
+            "author_support": 55.0,
+            "ranking_score": 27.05
+          },
+          {
+            "key": "/works/OL31996501W",
+            "title": "The Golden Son",
+            "authors": [],
+            "title_score": 25.0,
+            "author_support": 0.0,
+            "ranking_score": 25.0
+          },
+          {
+            "key": "/works/OL14919431W",
+            "title": "Son Golden Turkey Awards",
+            "authors": [
+              "Michael Medved"
+            ],
+            "title_score": 16.5882,
+            "author_support": 50.3497,
+            "ranking_score": 24.1407
+          }
+        ]
+      },
+      {
+        "title": "Under the Whispering Door",
+        "author": "T. J. Klune",
+        "expected_key": "/works/OL20862021W",
+        "query": "UNDER THE WHISPERING DOOR",
+        "candidate_text": "UNDER THE WHISPERING DOOR",
+        "rank": 1,
+        "cache_hit": true,
+        "top_candidates": [
+          {
+            "key": "/works/OL20862021W",
+            "title": "Under the Whispering Door",
+            "authors": [
+              "T. J. Klune"
+            ],
+            "title_score": 100.0,
+            "author_support": 100.0,
+            "ranking_score": 115.0
+          },
+          {
+            "key": "/works/OL36262561W",
+            "title": "The House in the Cerulean Sea / Under the Whispering Door / In the Lives of Puppets",
+            "authors": [
+              "T. J. Klune"
+            ],
+            "title_score": 13.4286,
+            "author_support": 100.0,
+            "ranking_score": 28.4286
+          },
+          {
+            "key": "/works/OL37776506W",
+            "title": "Under the Whispering Door by TJ Klune Barnes & Noble Exclusive Edition",
+            "authors": [],
+            "title_score": 14.7368,
+            "author_support": 0.0,
+            "ranking_score": 14.7368
+          }
+        ]
+      }
+    ]
+  },
+  "metrics": {
+    "ocr_cer": 0.0132,
+    "book_top_1_accuracy": 1.0,
+    "book_top_3_accuracy": 1.0,
+    "book_top_5_accuracy": 1.0,
+    "end_to_end_identification_rate": 1.0
+  }
+}

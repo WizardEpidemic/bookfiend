@@ -1,0 +1,113 @@
+# Runs BookFiend continuous integration checks and deploys the production demo through Vercel.
+
+name: BookFiend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend-validation:
+    name: Backend and evaluation validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile Python source
+        run: |
+          python -m compileall -q apps/api/app ml eval
+
+      - name: Check evaluation regression report
+        run: |
+          python eval/check_regression_report.py
+
+  frontend-build:
+    name: Frontend lint and build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build production frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_DEMO_MODE: "true"
+
+  deploy-production:
+    name: Deploy production
+    runs-on: ubuntu-latest
+    needs:
+      - backend-validation
+      - frontend-build
+
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Pull Vercel production configuration
+        working-directory: apps/web
+        run: >
+          npx vercel@latest pull
+          --yes
+          --environment=production
+          --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Vercel production deployment
+        working-directory: apps/web
+        run: >
+          npx vercel@latest build
+          --prod
+          --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel production
+        working-directory: apps/web
+        run: >
+          npx vercel@latest deploy
+          --prebuilt
+          --prod
+          --token=${{ secrets.VERCEL_TOKEN }}

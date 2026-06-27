@@ -90,7 +90,6 @@ jobs:
           node-version: "24"
 
       - name: Pull Vercel production configuration
-        working-directory: apps/web
         run: >
           npx vercel@latest pull
           --yes
@@ -98,14 +97,12 @@ jobs:
           --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Vercel production deployment
-        working-directory: apps/web
         run: >
           npx vercel@latest build
           --prod
           --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to Vercel production
-        working-directory: apps/web
         run: >
           npx vercel@latest deploy
           --prebuilt

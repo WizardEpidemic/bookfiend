@@ -118,6 +118,58 @@ function currentTimestamp() {
   return new Date().toISOString();
 }
 
+function getBookCoverUrl(book: MatchedBook) {
+  const normalizedIsbn = book.isbn?.replace(/[^0-9Xx]/g, "");
+
+  if (normalizedIsbn) {
+    return `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(
+      normalizedIsbn,
+    )}-M.jpg?default=false`;
+  }
+
+  const openLibraryId = book.open_library_key
+    ?.split("/")
+    .filter(Boolean)
+    .at(-1);
+
+  if (openLibraryId) {
+    return `https://covers.openlibrary.org/b/olid/${encodeURIComponent(
+      openLibraryId,
+    )}-M.jpg?default=false`;
+  }
+
+  return null;
+}
+
+function BookCover({ book }: { book: MatchedBook }) {
+  const coverUrl = getBookCoverUrl(book);
+
+  const [failedCoverUrl, setFailedCoverUrl] =
+    useState<string | null>(null);
+
+  const coverFailed =
+    coverUrl !== null &&
+    failedCoverUrl === coverUrl;
+
+  if (!coverUrl || coverFailed) {
+    return (
+      <div className="flex h-40 w-28 shrink-0 items-center justify-center rounded-lg border text-center text-xs opacity-50">
+        Cover unavailable
+      </div>
+    );
+  }
+
+  return (
+    <img
+      alt={`${book.title} book cover`}
+      className="h-40 w-28 shrink-0 rounded-lg border object-cover"
+      loading="lazy"
+      onError={() => setFailedCoverUrl(coverUrl)}
+      src={coverUrl}
+    />
+  );
+}
+
 export default function Home() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
@@ -760,50 +812,58 @@ export default function Home() {
                                 `${book.title}-${book.author}`
                               }
                             >
-                              <h4 className="text-lg font-semibold">
-                                {
-                                  book.title
-                                }
-                              </h4>
+                              <div className="flex gap-4">
+                                <BookCover
+                                  book={book}
+                                />
 
-                              <p className="mt-1 opacity-80">
-                                {book.author ??
-                                  "Unknown author"}
-                              </p>
-
-                              <div className="mt-4 space-y-1 text-sm opacity-70">
-                                <p>
-                                  Metadata
-                                  match:{" "}
-                                  {percentage(
-                                    book.match_score,
-                                  )}
-                                </p>
-
-                                <p>
-                                  OCR
-                                  confidence:{" "}
-                                  {percentage(
-                                    book.ocr_confidence,
-                                  )}
-                                </p>
-
-                                <p>
-                                  Author
-                                  evidence:{" "}
-                                  {percentage(
-                                    book.author_support,
-                                  )}
-                                </p>
-
-                                {book.isbn && (
-                                  <p>
-                                    ISBN:{" "}
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-lg font-semibold">
                                     {
-                                      book.isbn
+                                      book.title
                                     }
+                                  </h4>
+
+                                  <p className="mt-1 opacity-80">
+                                    {book.author ??
+                                      "Unknown author"}
                                   </p>
-                                )}
+
+                                  <div className="mt-4 space-y-1 text-sm opacity-70">
+                                    <p>
+                                      Metadata
+                                      match:{" "}
+                                      {percentage(
+                                        book.match_score,
+                                      )}
+                                    </p>
+
+                                    <p>
+                                      OCR
+                                      confidence:{" "}
+                                      {percentage(
+                                        book.ocr_confidence,
+                                      )}
+                                    </p>
+
+                                    <p>
+                                      Author
+                                      evidence:{" "}
+                                      {percentage(
+                                        book.author_support,
+                                      )}
+                                    </p>
+
+                                    {book.isbn && (
+                                      <p>
+                                        ISBN:{" "}
+                                        {
+                                          book.isbn
+                                        }
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </article>
                           ),
